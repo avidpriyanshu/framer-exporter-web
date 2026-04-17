@@ -9,7 +9,9 @@ const fs = require('fs');
 const path = require('path');
 
 async function exportSite(url, outputDir) {
+  const startTime = Date.now();
   console.log(`🚀 Starting export of ${url}`);
+  console.log(`   Timeout: 30s | URL: ${url}`);
 
   // Create output directory
   fs.mkdirSync(path.join(outputDir, 'images'), { recursive: true });
@@ -17,37 +19,45 @@ async function exportSite(url, outputDir) {
   fs.mkdirSync(path.join(outputDir, 'css'), { recursive: true });
 
   // Step 1: Crawl
+  const crawlStart = Date.now();
   console.log('📡 Crawling site...');
   const crawler = new CrawlerManager();
   await crawler.initialize();
   const { html, success } = await crawler.crawlUrl(url);
   await crawler.close();
+  const crawlTime = ((Date.now() - crawlStart) / 1000).toFixed(2);
 
   if (!success) {
     throw new Error('Crawl failed');
   }
 
-  console.log('✅ Crawl complete');
+  console.log(`✅ Crawl complete (${crawlTime}s)`);
 
   // Step 2: Extract assets
+  const extractStart = Date.now();
   console.log('🎨 Extracting assets...');
   const $ = cheerio.load(html);
   const finder = new AssetFinder($, url);
   const assets = finder.findAllAssets();
-  console.log(`✅ Found ${Object.values(assets).flat().length} assets`);
+  const extractTime = ((Date.now() - extractStart) / 1000).toFixed(2);
+  console.log(`✅ Found ${Object.values(assets).flat().length} assets (${extractTime}s)`);
 
   // Step 3: Rewrite URLs
+  const rewriteStart = Date.now();
   console.log('🔗 Rewriting URLs...');
   const rewriter = new URLRewriter(outputDir);
   const rewrittenHTML = rewriter.rewriteHTML(html);
   fs.writeFileSync(path.join(outputDir, 'index.html'), rewrittenHTML);
-  console.log('✅ URLs rewritten');
+  const rewriteTime = ((Date.now() - rewriteStart) / 1000).toFixed(2);
+  console.log(`✅ URLs rewritten (${rewriteTime}s)`);
 
   // Step 4: Validate
+  const validateStart = Date.now();
   console.log('🔍 Validating export...');
   const validator = new ExportValidator(outputDir);
   const report = validator.generateReport();
-  console.log('✅ Validation complete');
+  const validateTime = ((Date.now() - validateStart) / 1000).toFixed(2);
+  console.log(`✅ Validation complete (${validateTime}s)`);
   console.log(`   ${report.summary.filesProcessed} files`);
   console.log(`   ${report.summary.totalSize}`);
 
@@ -57,10 +67,15 @@ async function exportSite(url, outputDir) {
   }
 
   // Step 5: Create ZIP
+  const zipStart = Date.now();
   console.log('📦 Creating ZIP...');
   const builder = new ZipBuilder(outputDir);
   const zipPath = await builder.build(path.basename(outputDir));
-  console.log(`✅ Export saved to ${zipPath}`);
+  const zipTime = ((Date.now() - zipStart) / 1000).toFixed(2);
+  console.log(`✅ Export saved to ${zipPath} (${zipTime}s)`);
+
+  const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+  console.log(`\n⏱️  Total time: ${totalTime}s`);
 
   return zipPath;
 }
