@@ -1,5 +1,8 @@
 const { AssetFinder } = require('../src/extractor/asset-finder');
+const { URLRewriter } = require('../src/extractor/url-rewriter');
 const cheerio = require('cheerio');
+const fs = require('fs');
+const path = require('path');
 
 describe('Asset Finder', () => {
   test('finds all img src attributes', () => {
@@ -63,5 +66,61 @@ describe('Asset Finder', () => {
     const finder = new AssetFinder($);
     const assets = finder.findImages();
     expect(assets.filter(a => a === 'duplicate.png')).toHaveLength(1);
+  });
+});
+
+describe('URL Rewriter', () => {
+  let rewriter;
+  let testDir;
+
+  beforeEach(() => {
+    testDir = path.join(__dirname, 'fixtures');
+    fs.mkdirSync(testDir, { recursive: true });
+    fs.mkdirSync(path.join(testDir, 'images'), { recursive: true });
+    rewriter = new URLRewriter(testDir);
+  });
+
+  afterEach(() => {
+    fs.rmSync(testDir, { recursive: true, force: true });
+  });
+
+  test('rewrites img src from URL to local path', () => {
+    const html = '<img src="https://example.com/image.png">';
+    rewriter.registerAsset('image.png', 'https://example.com/image.png');
+    fs.writeFileSync(path.join(testDir, 'images', 'image.png'), '');
+    const result = rewriter.rewriteHTML(html);
+    expect(result).toContain('src="image.png"');
+  });
+
+  test('rewrites srcset URLs', () => {
+    const html = '<img srcset="https://example.com/small.png 480w, https://example.com/large.png 1024w">';
+    rewriter.registerAsset('small.png', 'https://example.com/small.png');
+    rewriter.registerAsset('large.png', 'https://example.com/large.png');
+    fs.writeFileSync(path.join(testDir, 'images', 'small.png'), '');
+    fs.writeFileSync(path.join(testDir, 'images', 'large.png'), '');
+    const result = rewriter.rewriteHTML(html);
+    expect(result).toContain('small.png');
+    expect(result).toContain('large.png');
+  });
+
+  test('rewrites CSS background-image URLs', () => {
+    const html = '<style>body { background-image: url("https://example.com/bg.png"); }</style>';
+    rewriter.registerAsset('bg.png', 'https://example.com/bg.png');
+    fs.writeFileSync(path.join(testDir, 'images', 'bg.png'), '');
+    const result = rewriter.rewriteHTML(html);
+    expect(result).toContain("url('bg.png')");
+  });
+
+  test('preserves anchors and mailto links', () => {
+    const html = '<a href="#section">Anchor</a><a href="mailto:test@example.com">Email</a>';
+    const result = rewriter.rewriteHTML(html);
+    expect(result).toContain('href="#section"');
+    expect(result).toContain('href="mailto:test@example.com"');
+  });
+
+  test('validates missing assets after rewriting', () => {
+    rewriter.registerAsset('missing.png', 'https://example.com/missing.png');
+    const validation = rewriter.validateAssets();
+    expect(validation.missing).toContain('missing.png');
   });
 });
