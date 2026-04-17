@@ -16,31 +16,31 @@ async function createBrowserWithBypass() {
     ],
   });
 
-  const defaultCreatePage = browser._createPageFromTarget.bind(browser);
-  browser._createPageFromTarget = async function(target, ...args) {
-    const page = await defaultCreatePage(target, ...args);
-
-    // Disable webdriver property
-    await page.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, 'webdriver', {
-        get: () => undefined,
-      });
-    });
-
-    // Set realistic user agent
-    const ua = REAL_USER_AGENTS[Math.floor(Math.random() * REAL_USER_AGENTS.length)];
-    await page.setUserAgent(ua);
-
-    // Add delay injection utility
-    page.addRandomDelay = async (min = 300, max = 1200) => {
-      const delay = Math.random() * (max - min) + min;
-      await new Promise(r => setTimeout(r, delay));
-    };
-
-    return page;
-  };
-
   return browser;
 }
 
-module.exports = { createBrowserWithBypass };
+async function applyAntiBot(page) {
+  // Disable webdriver detection
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, 'webdriver', {
+      get: () => false,
+    });
+
+    // Override chrome property
+    Object.defineProperty(navigator, 'chrome', {
+      get: () => ({ runtime: {} }),
+    });
+  });
+
+  // Set realistic user agent
+  const ua = REAL_USER_AGENTS[Math.floor(Math.random() * REAL_USER_AGENTS.length)];
+  await page.setUserAgent(ua);
+
+  // Add delay injection utility
+  page.addRandomDelay = async (min = 300, max = 1200) => {
+    const delay = Math.random() * (max - min) + min;
+    await new Promise(r => setTimeout(r, delay));
+  };
+}
+
+module.exports = { createBrowserWithBypass, applyAntiBot };

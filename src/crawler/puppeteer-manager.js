@@ -1,4 +1,4 @@
-const { createBrowserWithBypass } = require('./anti-bot-bypass');
+const { createBrowserWithBypass, applyAntiBot } = require('./anti-bot-bypass');
 
 class CrawlerManager {
   constructor(options = {}) {
@@ -20,6 +20,9 @@ class CrawlerManager {
     const page = await this.browser.newPage();
 
     try {
+      // Apply anti-bot measures
+      await applyAntiBot(page);
+
       // Navigate with timeout
       await Promise.race([
         page.goto(url, { waitUntil: 'networkidle2' }),
