@@ -1,0 +1,27 @@
+{
+  "name": "framer-exporter",
+  "version": "1.0.0",
+  "description": "Export Framer/Webflow sites to static packages",
+  "main": "src/cli.js",
+  "bin": {
+    "framer-exporter": "./bin/framer-exporter"
+  },
+  "scripts": {
+    "test": "jest",
+    "export": "node bin/framer-exporter"
+  },
+  "keywords": ["framer", "webflow", "export", "static"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^22.0.0",
+    "cheerio": "^1.0.0-rc.12",
+    "sharp": "^0.33.0",
+    "archiver": "^6.0.0",
+    "extract-zip": "^2.0.0",
+    "yargs": "^17.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}
