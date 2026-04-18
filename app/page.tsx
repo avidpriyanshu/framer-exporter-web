@@ -6,6 +6,7 @@ export default function Home() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
   const isValidUrl = url.trim().startsWith('https://');
 
@@ -25,6 +26,15 @@ export default function Home() {
         const data = await response.json();
         setError(data.error || 'Something went wrong. Please try again.');
         setLoading(false);
+
+        // Handle rate limiting with auto-clear after 5 seconds
+        if (response.status === 429) {
+          setIsRateLimited(true);
+          setTimeout(() => {
+            setIsRateLimited(false);
+            setError('');
+          }, 5000);
+        }
         return;
       }
 
@@ -62,10 +72,10 @@ export default function Home() {
             placeholder="https://framer.com/..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            disabled={loading}
+            disabled={loading || isRateLimited}
             required
           />
-          <button type="submit" disabled={loading || !isValidUrl}>
+          <button type="submit" disabled={loading || !isValidUrl || isRateLimited}>
             {loading ? 'Exporting...' : 'Export'}
           </button>
         </form>
