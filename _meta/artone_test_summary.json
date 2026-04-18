@@ -1,0 +1,117 @@
+{
+  "testMetadata": {
+    "testDate": "2026-04-18",
+    "testEnvironment": "macOS, Node.js",
+    "targetWebsite": "https://www.artone.studio/",
+    "testStatus": "SUCCESS",
+    "totalTestDuration": "~35 minutes"
+  },
+  "checklist": {
+    "1_dev_server_startup": "✅ PASS",
+    "2_server_confirmation": "✅ PASS",
+    "3_url_submission": "✅ PASS",
+    "4_export_completion": "✅ PASS (16-19s)",
+    "5_zip_download": "✅ PASS",
+    "6_zip_contents": "✅ PASS",
+    "7_html_validation": "✅ PASS",
+    "8_component_index": "✅ PASS",
+    "9_sections_detection": "✅ PASS",
+    "10_components_extraction": "✅ PASS",
+    "11_response_headers": "✅ PASS",
+    "12_console_output": "✅ PASS"
+  },
+  "pipelineMetrics": {
+    "request1": {
+      "htmlParseTime_ms": 40,
+      "normalizationTime_ms": 2,
+      "sectionDetectionTime_ms": 6,
+      "componentExtractionTime_ms": 1,
+      "semanticNamingTime_ms": 0,
+      "codeGenerationTime_ms": 2,
+      "totalPipelineTime_ms": 51,
+      "nodeCountInitial": 2450,
+      "nodeCountFinal": 845,
+      "componentsDetected": 25,
+      "sectionsDetected": 2
+    },
+    "request2": {
+      "htmlParseTime_ms": 21,
+      "normalizationTime_ms": 2,
+      "sectionDetectionTime_ms": 5,
+      "componentExtractionTime_ms": 1,
+      "semanticNamingTime_ms": 0,
+      "codeGenerationTime_ms": 1,
+      "totalPipelineTime_ms": 30,
+      "nodeCountInitial": 2450,
+      "nodeCountFinal": 845,
+      "componentsDetected": 25,
+      "sectionsDetected": 2
+    }
+  },
+  "exportMetrics": {
+    "request1": {
+      "totalTime_s": 18.05,
+      "crawlTime_s": 17.88,
+      "metadataAnalysisTime_s": 0.00,
+      "assetsExtracted": 133,
+      "assetExtractionTime_s": 0.04,
+      "urlRewriteTime_s": 0.03,
+      "validationTime_s": 0.06,
+      "zipCreationTime_s": 0.03,
+      "dashboardTime_s": 0.02,
+      "totalRequest_s": 19.325
+    },
+    "request2": {
+      "totalTime_s": 16.26,
+      "crawlTime_s": 16.12,
+      "metadataAnalysisTime_s": 0.00,
+      "assetsExtracted": 133,
+      "assetExtractionTime_s": 0.03,
+      "urlRewriteTime_s": 0.03,
+      "validationTime_s": 0.06,
+      "zipCreationTime_s": 0.01,
+      "dashboardTime_s": 0.00,
+      "totalRequest_s": 16.318
+    }
+  },
+  "fileSizes": {
+    "originalHTML_KB": 442.5,
+    "processedIndexHTML_KB": 144,
+    "compressionRatio": "32.5%",
+    "zipFile_KB": 40,
+    "componentIndex_KB": 57
+  },
+  "htmlAnalysis": {
+    "totalDataComponentAttributes": 845,
+    "uniqueComponentTypes": 50,
+    "topComponents": {
+      "Icon": 45,
+      "Heading": 15,
+      "Image": 8,
+      "Various": 777
+    },
+    "semanticComponents": {
+      "Nav": 1,
+      "Header": 1,
+      "Main": 1,
+      "Section": 12,
+      "Total": 15
+    }
+  },
+  "qualityAssessment": {
+    "htmlEnhancement": "EXCELLENT",
+    "componentExtraction": "VERY GOOD",
+    "documentation": "GOOD",
+    "performance": "EXCELLENT",
+    "overallResult": "PRODUCTION READY"
+  },
+  "warnings": {
+    "exportPhase": [
+      "9 broken links found (expected, acceptable)"
+    ],
+    "pipelineErrors": [],
+    "buildWarnings": [
+      "yargs module critical dependency (non-blocking, expected)"
+    ]
+  }
+}

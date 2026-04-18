@@ -3,13 +3,13 @@ import { RawDOMNode, ParsedResult } from '../types';
 
 export function parseHTML(html: string): ParsedResult {
   const startTime = Date.now();
-  // Load with fragment mode to avoid wrapping in html/body
-  const $ = cheerio.load(html, { decodeEntities: true });
+  // Load HTML
+  const $ = cheerio.load(html);
 
   const nodeSet = new Set<string>();
   let nodeCount = 0;
 
-  function traverse(element: cheerio.Element | null): RawDOMNode | null {
+  function traverse(element: any): RawDOMNode | null {
     if (!element) return null;
 
     const node: RawDOMNode = {
@@ -23,8 +23,8 @@ export function parseHTML(html: string): ParsedResult {
     nodeSet.add(element.name || 'text');
 
     if (element.children) {
-      element.children.forEach((child) => {
-        const childNode = traverse(child as cheerio.Element);
+      element.children.forEach((child: any) => {
+        const childNode = traverse(child as any);
         if (childNode) {
           node.children.push(childNode);
         }
@@ -35,21 +35,21 @@ export function parseHTML(html: string): ParsedResult {
   }
 
   // Get root element - cheerio wraps in html, so get body's first child
-  let rootElement: cheerio.Element | null = null;
+  let rootElement: any = null;
 
   // Navigate: html > body > [first tag child]
-  const htmlElement = $.root().children()[0] as cheerio.Element;
+  const htmlElement = $.root().children()[0] as any;
 
   if (htmlElement && htmlElement.name === 'html') {
     const bodyElement = htmlElement.children?.find(
       (child: any) => child.type === 'tag' && child.name === 'body'
-    ) as cheerio.Element | undefined;
+    ) as any;
 
     if (bodyElement && bodyElement.children && bodyElement.children.length > 0) {
       // Find first tag child of body
       for (const child of bodyElement.children) {
-        if ((child as cheerio.Element).type === 'tag') {
-          rootElement = child as cheerio.Element;
+        if ((child as any).type === 'tag') {
+          rootElement = child as any;
           break;
         }
       }

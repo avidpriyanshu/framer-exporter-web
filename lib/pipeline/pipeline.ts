@@ -6,7 +6,10 @@ import { assignSemanticNames } from './stages/5-semantic-namer';
 import { generateEnhancedOutput } from './stages/6-code-generator';
 import { CodeGenOutput, PipelineMetrics } from './types';
 
-export interface PipelineResult extends CodeGenOutput {
+export interface PipelineResult {
+  enhancedHTML: string;
+  components: CodeGenOutput['components'];
+  componentIndex: string;
   metrics: PipelineMetrics;
 }
 

@@ -78,7 +78,7 @@ export async function exportSiteWithPipeline(
 
     // Extract HTML from zip
     const zip = new AdmZip(zipPath);
-    const htmlEntry = zip.findEntry('index.html');
+    const htmlEntry = zip.getEntry('index.html');
     if (!htmlEntry) {
       throw new Error('No index.html found in export');
     }
