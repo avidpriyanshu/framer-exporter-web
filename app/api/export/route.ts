@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isValidFramerUrl } from '@/lib/validator';
-import { spawnExporter } from '@/lib/cli';
+import { spawnExporter, exportSiteWithPipeline } from '@/lib/cli';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -42,29 +42,44 @@ export async function POST(request: NextRequest) {
     fs.mkdirSync(tempDir, { recursive: true });
 
     try {
-      // Spawn exporter
-      const result = await spawnExporter(url, tempDir, 60000);
+      // Export with pipeline enhancement
+      let zipPath: string;
+      let pipelineMetrics: any = null;
 
-      if (!result.success) {
-        return NextResponse.json(
-          { error: result.error || 'Something went wrong. Please try again.' },
-          { status: 500 }
-        );
+      try {
+        const { zipPath: enhancedZipPath, pipelineMetrics: metrics } =
+          await exportSiteWithPipeline(url, tempDir);
+        zipPath = enhancedZipPath;
+        pipelineMetrics = metrics;
+      } catch (pipelineError) {
+        // Fallback: if pipeline fails, use standard export
+        console.warn('Pipeline execution failed, falling back to standard export:', pipelineError);
+        const result = await spawnExporter(url, tempDir, 60000);
+        if (!result.success) {
+          throw new Error(result.error || 'Export failed');
+        }
+        zipPath = result.zipPath!;
       }
 
       // Read zip file
-      const zipPath = result.zipPath!;
       const zipBuffer = fs.readFileSync(zipPath);
 
       // Return zip with download headers
       const filename = `framer-export-${Date.now()}.zip`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': zipBuffer.length.toString(),
+      };
+
+      // Add pipeline metrics header if available
+      if (pipelineMetrics) {
+        headers['X-Pipeline-Metrics'] = JSON.stringify(pipelineMetrics);
+      }
+
       return new NextResponse(zipBuffer, {
         status: 200,
-        headers: {
-          'Content-Type': 'application/zip',
-          'Content-Disposition': `attachment; filename="${filename}"`,
-          'Content-Length': zipBuffer.length.toString(),
-        },
+        headers,
       });
     } finally {
       // Cleanup temp directory
