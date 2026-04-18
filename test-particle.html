@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Particle Hero Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #000; color: #fff; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Three.js library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Framer Motion library -->
+  <script src="https://cdn.jsdelivr.net/npm/framer-motion@10/dist/framer-motion.js"></script>
+
+  <!-- React (needed for component) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <script>
+    // Simplified particle hero (vanilla JS, no React)
+    const container = document.getElementById('root');
+    let scrollProgress = 0;
+    let animationId = null;
+
+    // Track scroll
+    window.addEventListener('scroll', () => {
+      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+      scrollProgress = Math.min(window.scrollY / totalScroll, 1);
+    });
+
+    function initParticles() {
+      // Canvas setup
+      const canvas = document.createElement('canvas');
+      canvas.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      `;
+      container.appendChild(canvas);
+
+      // Three.js setup
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 150;
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 0.1);
+
+      // Create particles
+      const particleCount = 1500;
+      const positions = new Float32Array(particleCount * 3);
+      const colors = new Float32Array(particleCount * 3);
+
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI;
+        const radius = 50 + Math.random() * 50;
+
+        positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+        positions[i3 + 1] = radius * Math.cos(phi);
+        positions[i3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+
+        const hue = Math.random();
+        colors[i3] = Math.sin(hue * Math.PI) * 0.7 + 0.3;
+        colors[i3 + 1] = Math.sin((hue + 0.33) * Math.PI) * 0.7 + 0.3;
+        colors[i3 + 2] = Math.sin((hue + 0.66) * Math.PI) * 0.7 + 0.3;
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+      const material = new THREE.PointsMaterial({
+        size: 2.5,
+        sizeAttenuation: true,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.8,
+      });
+
+      const particles = new THREE.Points(geometry, material);
+      scene.add(particles);
+
+      // Original positions for wave effect
+      const originalPositions = new Float32Array(positions);
+
+      // Animation loop
+      function animate() {
+        // Update rotation based on scroll
+        particles.rotation.x = scrollProgress * Math.PI * 2;
+        particles.rotation.y = scrollProgress * Math.PI * 4;
+        particles.scale.set(
+          1 - scrollProgress * 0.7,
+          1 - scrollProgress * 0.7,
+          1 - scrollProgress * 0.7
+        );
+
+        // Update positions with wave effect
+        const posArray = geometry.attributes.position.array;
+        for (let i = 0; i < originalPositions.length; i += 3) {
+          posArray[i] = originalPositions[i] + Math.sin(scrollProgress * Math.PI * 2 + i * 0.001) * 10;
+          posArray[i + 1] = originalPositions[i + 1] + Math.cos(scrollProgress * Math.PI * 2 + i * 0.001) * 10;
+          posArray[i + 2] = originalPositions[i + 2] + Math.sin(scrollProgress * Math.PI + i * 0.001) * 5;
+        }
+        geometry.attributes.position.needsUpdate = true;
+
+        renderer.render(scene, camera);
+        animationId = requestAnimationFrame(animate);
+      }
+
+      animate();
+
+      // Handle resize
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
+
+    // Create hero section
+    const heroSection = document.createElement('div');
+    heroSection.style.cssText = `
+      height: 220vh;
+      background: #0a0a0a;
+      position: relative;
+      z-index: 1;
+    `;
+    container.appendChild(heroSection);
+
+    // Create content section
+    const contentSection = document.createElement('div');
+    contentSection.style.cssText = `
+      padding: 4rem 2rem;
+      background: #fff;
+      color: #000;
+      z-index: 2;
+      position: relative;
+    `;
+    contentSection.innerHTML = `
+      <h2>✅ Particle Hero is Working!</h2>
+      <p>Scroll up to see particles react to scroll position.</p>
+      <p>Check console for any errors (Ctrl+Shift+J).</p>
+      <ul style="margin-top: 1rem; margin-left: 2rem;">
+        <li>Particles rotate as you scroll</li>
+        <li>Particles scale down</li>
+        <li>Wave ripple effect propagates through cloud</li>
+      </ul>
+    `;
+    container.appendChild(contentSection);
+
+    // Init when DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initParticles);
+    } else {
+      initParticles();
+    }
+  </script>
+</body>
+</html>

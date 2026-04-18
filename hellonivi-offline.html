@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hello nivi - Your LinkedIn Personal Branding Strategist</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      line-height: 1.6;
+    }
+    canvas {
+      display: block;
+    }
+
+    /* NAVIGATION */
+    nav {
+      position: relative;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem;
+      padding-left: 4rem;
+      padding-right: 4rem;
+      background: rgba(10, 10, 10, 0.95);
+      backdrop-filter: blur(4px);
+    }
+    nav .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    nav .logo img {
+      width: 24px;
+      height: 24px;
+    }
+    nav .links {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    nav a {
+      text-decoration: none;
+      color: #888;
+      font-size: 0.875rem;
+      transition: color 0.3s;
+    }
+    nav a:hover {
+      color: #fff;
+    }
+    nav .cta {
+      background: white;
+      color: black;
+      padding: 0.5rem 1.25rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    nav .cta:hover {
+      background: #f0f0f0;
+    }
+    @media (max-width: 640px) {
+      nav { padding: 1rem; }
+      nav .links { gap: 1rem; }
+      nav a:not(.cta) { display: none; }
+    }
+
+    /* HERO SECTION */
+    .hero {
+      position: relative;
+      height: 220vh;
+      background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+    }
+    .hero-content {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: hidden;
+      background: #fff;
+    }
+    .canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .hero-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      pointer-events: none;
+      color: #000;
+      z-index: 10;
+    }
+    .hero-text h1 {
+      font-size: 3.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .hero-text p {
+      font-size: 1.25rem;
+      color: #666;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    @media (max-width: 768px) {
+      .hero-text h1 { font-size: 2.5rem; }
+      .hero-text p { font-size: 1rem; }
+    }
+
+    /* CONTENT SECTIONS */
+    section {
+      padding: 4rem 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    section h2 {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+      color: #000;
+    }
+    section p {
+      font-size: 1rem;
+      color: #444;
+      margin-bottom: 1.5rem;
+      line-height: 1.8;
+    }
+
+    /* FEATURES GRID */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    .feature-card {
+      background: #f5f5f5;
+      padding: 2rem;
+      border-radius: 1rem;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .feature-card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: #000;
+    }
+    .feature-card p {
+      color: #666;
+      font-size: 0.95rem;
+    }
+
+    /* FOOTER */
+    footer {
+      background: #000;
+      color: #888;
+      padding: 2rem;
+      text-align: center;
+      border-top: 1px solid #222;
+    }
+    footer p {
+      color: #888;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- NAVIGATION -->
+  <nav>
+    <div class="logo">
+      <div style="width: 24px; height: 24px; background: linear-gradient(135deg, #00d4ff, #0099ff); border-radius: 4px;"></div>
+      <span>hello nivi</span>
+    </div>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#signin">Sign in</a>
+      <a href="#signup" class="cta">Get started free</a>
+    </div>
+  </nav>
+
+  <!-- HERO WITH PARTICLES -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="canvas-container" id="particleContainer"></div>
+      <div class="hero-text">
+        <h1>Your LinkedIn<br>Personal Branding<br>Strategist</h1>
+        <p>Scroll down to see the particles react</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES SECTION -->
+  <section style="background: #fff;">
+    <h2 id="features">Key Features</h2>
+    <div class="features">
+      <div class="feature-card">
+        <h3>🤖 AI Post Composer</h3>
+        <p>Interactive editor with inline AI edits. Select text, rewrite, expand, or punch it up.</p>
+      </div>
+      <div class="feature-card">
+        <h3>🎤 Voice DNA</h3>
+        <p>Nivi studies your writing samples and every post sounds like you — not AI.</p>
+      </div>
+      <div class="feature-card">
+        <h3>📱 WhatsApp-First</h3>
+        <p>Morning briefs, post approvals, engagement alerts — all in WhatsApp.</p>
+      </div>
+      <div class="feature-card">
+        <h3>💬 Strategic Engagement</h3>
+        <p>Auto-scrapes target accounts for new posts. Draft comments on demand.</p>
+      </div>
+      <div class="feature-card">
+        <h3>📅 Content Calendar</h3>
+        <p>Drag-and-drop scheduling with snap zones. Move posts between days instantly.</p>
+      </div>
+      <div class="feature-card">
+        <h3>💡 Inspiration Library</h3>
+        <p>100+ top LinkedIn creators scraped weekly. Remix any post in your voice.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section style="background: #f5f5f5;" id="how">
+    <h2>How It Works</h2>
+    <p>Nivi learns your voice from writing samples and interview answers. Every day, she:</p>
+    <ol style="color: #444; margin-left: 2rem;">
+      <li style="margin: 1rem 0;">Scouts trending posts from your target creators</li>
+      <li style="margin: 1rem 0;">Drafts voice-matched content in your style</li>
+      <li style="margin: 1rem 0;">Sends it to WhatsApp for approval</li>
+      <li style="margin: 1rem 0;">Publishes to LinkedIn with one word</li>
+      <li style="margin: 1rem 0;">Tracks performance analytics in real-time</li>
+    </ol>
+  </section>
+
+  <!-- PRICING -->
+  <section style="background: #fff;" id="pricing">
+    <h2>Pricing</h2>
+    <p>Simple, transparent pricing. No hidden fees.</p>
+    <div class="features">
+      <div class="feature-card">
+        <h3>Starter</h3>
+        <p style="font-size: 1.5rem; font-weight: 600; color: #0099ff; margin: 1rem 0;">Free</p>
+        <p>Perfect for trying out Nivi</p>
+        <ul style="text-align: left; color: #666; margin: 1rem 0;">
+          <li>✓ 5 AI-generated posts/month</li>
+          <li>✓ Basic voice analysis</li>
+          <li>✓ WhatsApp notifications</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <h3>Pro</h3>
+        <p style="font-size: 1.5rem; font-weight: 600; color: #0099ff; margin: 1rem 0;">$29/mo</p>
+        <p>For serious creators</p>
+        <ul style="text-align: left; color: #666; margin: 1rem 0;">
+          <li>✓ Unlimited posts</li>
+          <li>✓ Advanced voice DNA</li>
+          <li>✓ Content calendar</li>
+          <li>✓ Analytics dashboard</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <h3>Enterprise</h3>
+        <p style="font-size: 1.5rem; font-weight: 600; color: #0099ff; margin: 1rem 0;">Custom</p>
+        <p>For teams and agencies</p>
+        <ul style="text-align: left; color: #666; margin: 1rem 0;">
+          <li>✓ Everything in Pro</li>
+          <li>✓ Team collaboration</li>
+          <li>✓ API access</li>
+          <li>✓ Dedicated support</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA SECTION -->
+  <section style="background: linear-gradient(135deg, #0099ff 0%, #00d4ff 100%); color: #fff; text-align: center;">
+    <h2 style="color: #fff;">Ready to transform your LinkedIn?</h2>
+    <p>Start building your personal brand today.</p>
+    <button id="signup" style="background: #fff; color: #0099ff; padding: 1rem 2rem; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; font-size: 1rem; margin-top: 1rem;">
+      Get Started Free
+    </button>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; 2026 hello nivi. All rights reserved. | Made for creators, by creators</p>
+  </footer>
+
+  <script>
+    // PARTICLE HERO IMPLEMENTATION
+    const particleContainer = document.getElementById('particleContainer');
+    let scrollProgress = 0;
+
+    // Track scroll
+    window.addEventListener('scroll', () => {
+      const heroSection = document.querySelector('.hero');
+      const rect = heroSection.getBoundingClientRect();
+      const sectionHeight = heroSection.offsetHeight;
+      const windowHeight = window.innerHeight;
+      scrollProgress = Math.max(0, Math.min(1, -rect.top / (sectionHeight - windowHeight)));
+    });
+
+    // THREE.JS SETUP
+    const canvas = document.createElement('canvas');
+    particleContainer.appendChild(canvas);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 150;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0xffffff, 0.2);
+
+    // CREATE PARTICLES
+    const particleCount = 2000;
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount; i++) {
+      const i3 = i * 3;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI;
+      const radius = 50 + Math.random() * 50;
+
+      positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+      positions[i3 + 1] = radius * Math.cos(phi);
+      positions[i3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+
+      // Cyan to white gradient
+      const hue = Math.random();
+      colors[i3] = 0.3 + hue * 0.7;      // R: white
+      colors[i3 + 1] = 0.8 + hue * 0.2;  // G: cyan
+      colors[i3 + 2] = 1.0;              // B: blue
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+      size: 2.5,
+      sizeAttenuation: true,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.8,
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+
+    const originalPositions = new Float32Array(positions);
+
+    // ANIMATION LOOP
+    function animate() {
+      // Update rotation based on scroll
+      particles.rotation.x = scrollProgress * Math.PI * 2;
+      particles.rotation.y = scrollProgress * Math.PI * 4;
+      particles.scale.set(
+        1 - scrollProgress * 0.7,
+        1 - scrollProgress * 0.7,
+        1 - scrollProgress * 0.7
+      );
+
+      // Update positions with wave effect
+      const posArray = geometry.attributes.position.array;
+      for (let i = 0; i < originalPositions.length; i += 3) {
+        posArray[i] = originalPositions[i] + Math.sin(scrollProgress * Math.PI * 2 + i * 0.001) * 10;
+        posArray[i + 1] = originalPositions[i + 1] + Math.cos(scrollProgress * Math.PI * 2 + i * 0.001) * 10;
+        posArray[i + 2] = originalPositions[i + 2] + Math.sin(scrollProgress * Math.PI + i * 0.001) * 5;
+      }
+      geometry.attributes.position.needsUpdate = true;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    // RESIZE HANDLER
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

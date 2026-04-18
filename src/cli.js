@@ -4,6 +4,8 @@ const { AssetFinder } = require('./extractor/asset-finder');
 const { URLRewriter } = require('./extractor/url-rewriter');
 const { ExportValidator } = require('./validator/export-quality');
 const { ZipBuilder } = require('./packager/zip-builder');
+const { FramerAnalyzer } = require('./analyzer/framer-analyzer');
+const { DashboardGenerator } = require('./dashboard/dashboard-generator');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
@@ -33,7 +35,15 @@ async function exportSite(url, outputDir) {
 
   console.log(`✅ Crawl complete (${crawlTime}s)`);
 
-  // Step 2: Extract assets
+  // Step 2: Analyze Framer metadata
+  const analyzeStart = Date.now();
+  console.log('🔍 Analyzing metadata...');
+  const analyzer = new FramerAnalyzer(html);
+  const framerInfo = analyzer.analyze();
+  const analyzeTime = ((Date.now() - analyzeStart) / 1000).toFixed(2);
+  console.log(`✅ Metadata analyzed (${analyzeTime}s)`);
+
+  // Step 3: Extract assets
   const extractStart = Date.now();
   console.log('🎨 Extracting assets...');
   const $ = cheerio.load(html);
@@ -42,7 +52,7 @@ async function exportSite(url, outputDir) {
   const extractTime = ((Date.now() - extractStart) / 1000).toFixed(2);
   console.log(`✅ Found ${Object.values(assets).flat().length} assets (${extractTime}s)`);
 
-  // Step 3: Rewrite URLs
+  // Step 4: Rewrite URLs
   const rewriteStart = Date.now();
   console.log('🔗 Rewriting URLs...');
   const rewriter = new URLRewriter(outputDir);
@@ -51,28 +61,54 @@ async function exportSite(url, outputDir) {
   const rewriteTime = ((Date.now() - rewriteStart) / 1000).toFixed(2);
   console.log(`✅ URLs rewritten (${rewriteTime}s)`);
 
-  // Step 4: Validate
+  // Step 5: Validate
   const validateStart = Date.now();
   console.log('🔍 Validating export...');
   const validator = new ExportValidator(outputDir);
-  const report = validator.generateReport();
+  const validationReport = validator.generateReport();
   const validateTime = ((Date.now() - validateStart) / 1000).toFixed(2);
   console.log(`✅ Validation complete (${validateTime}s)`);
-  console.log(`   ${report.summary.filesProcessed} files`);
-  console.log(`   ${report.summary.totalSize}`);
+  console.log(`   ${validationReport.summary.filesProcessed} files`);
+  console.log(`   ${validationReport.summary.totalSize}`);
 
-  if (report.summary.warnings.length > 0) {
+  if (validationReport.summary.warnings.length > 0) {
     console.log('⚠️  Warnings:');
-    report.summary.warnings.forEach(w => console.log(`   - ${w}`));
+    validationReport.summary.warnings.forEach(w => console.log(`   - ${w}`));
   }
 
-  // Step 5: Create ZIP
+  // Step 6: Create ZIP
   const zipStart = Date.now();
   console.log('📦 Creating ZIP...');
   const builder = new ZipBuilder(outputDir);
   const zipPath = await builder.build(path.basename(outputDir));
   const zipTime = ((Date.now() - zipStart) / 1000).toFixed(2);
   console.log(`✅ Export saved to ${zipPath} (${zipTime}s)`);
+
+  // Step 7: Generate Dashboard
+  const dashboardStart = Date.now();
+  console.log('📊 Generating dashboard...');
+  const report = {
+    url,
+    exportedAt: new Date().toISOString(),
+    siteTitle: framerInfo.siteTitle,
+    assets,
+    timing: {
+      crawlTime: parseFloat(crawlTime),
+      extractTime: parseFloat(extractTime),
+      rewriteTime: parseFloat(rewriteTime),
+      validateTime: parseFloat(validateTime),
+      zipTime: parseFloat(zipTime),
+      totalTime: parseFloat(((Date.now() - startTime) / 1000).toFixed(2)),
+    },
+    validation: validationReport.validation,
+    hidden: validationReport.hidden,
+    framerInfo,
+  };
+  const dashboardGenerator = new DashboardGenerator(report);
+  const dashboardHTML = dashboardGenerator.generate();
+  fs.writeFileSync(path.join(outputDir, 'dashboard.html'), dashboardHTML);
+  const dashboardTime = ((Date.now() - dashboardStart) / 1000).toFixed(2);
+  console.log(`✅ Dashboard saved to dashboard.html (${dashboardTime}s)`);
 
   const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
   console.log(`\n⏱️  Total time: ${totalTime}s`);
