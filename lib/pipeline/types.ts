@@ -75,6 +75,37 @@ export interface CodeGenOutput {
   metrics: Record<string, number>;
 }
 
+export interface DesignToken {
+  colors: Record<string, string>;
+  spacing: Record<string, string>;
+  typography: Record<string, Record<string, string>>;
+  borders: Record<string, Record<string, string>>;
+  shadows: Record<string, string>;
+}
+
+export interface NextjsProject {
+  packageJson: Record<string, any>;
+  tsconfig: Record<string, any>;
+  nextConfig: Record<string, any>;
+  pages?: Record<string, string>;
+  components?: Record<string, string>;
+  styles?: Record<string, string>;
+  public?: Record<string, Buffer>;
+}
+
+export interface ProductionOutput {
+  projectName: string;
+  nextjsProject: NextjsProject;
+  components: EnhancedComponent[];
+  designTokens: DesignToken;
+  cssVariables: string;
+  metadata: {
+    componentsGenerated: number;
+    tokensExtracted: number;
+    estimatedBundleSize: number;
+  };
+}
+
 export interface PipelineMetrics {
   htmlParseTime: number;
   normalizationTime: number;
