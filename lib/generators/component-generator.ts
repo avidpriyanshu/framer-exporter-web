@@ -149,9 +149,9 @@ ${propsInterfaceBody}
 }\n`
     : '';
 
-  // Extract prop names for function signature
+  // Extract prop names for function signature (remove optional markers for destructuring)
   const destructuredProps = props.length > 0
-    ? `{ ${props.map((p) => p.split(':')[0].trim()).join(', ')} }`
+    ? `{ ${props.map((p) => p.split(':')[0].trim().replace(/\?$/, '')).join(', ')} }`
     : '';
 
   const functionSignature = props.length > 0
