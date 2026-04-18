@@ -50,3 +50,36 @@ export function generateReactComponent(node: SemanticTreeNode): string {
   return <div>{/* Component implementation */}</div>;
 }`;
 }
+
+export function inferComponentProps(node: SemanticTreeNode): string[] {
+  const props = new Set<string>();
+
+  // From class names
+  const className = node.attributes.class || '';
+  if (className.includes('primary') || className.includes('secondary')) {
+    props.add('variant: "primary" | "secondary"');
+  }
+  if (className.includes('small') || className.includes('large')) {
+    props.add('size: "small" | "large"');
+  }
+
+  // From text content
+  if (node.text) {
+    props.add('label?: string');
+  }
+
+  // From href attribute
+  if (node.attributes.href) {
+    props.add('href?: string');
+  }
+
+  // From data attributes
+  Object.keys(node.attributes).forEach((attr) => {
+    if (attr.startsWith('data-')) {
+      const propName = attr.replace('data-', '');
+      props.add(`${propName}?: string`);
+    }
+  });
+
+  return Array.from(props);
+}
