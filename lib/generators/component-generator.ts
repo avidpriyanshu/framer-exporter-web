@@ -196,19 +196,19 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
   const isSingleLine = !hasChildren && hasText && node.text && node.text.length < 60;
 
   if (isSingleLine && node.text) {
-    return `${indent}<${elementTag}${attrString}>${node.text}</${elementTag}>`;
+    return `<${elementTag}${attrString}>${node.text}</${elementTag}>`;
   }
 
   // Multi-line format
   if (hasChildren || (hasText && node.text && node.text.length >= 60)) {
-    return `${indent}<${elementTag}${attrString}>\n${nextIndent}${content}\n${indent}</${elementTag}>`;
+    return `<${elementTag}${attrString}>\n${nextIndent}${content}\n${indent}</${elementTag}>`;
   }
 
   if (hasText && node.text) {
-    return `${indent}<${elementTag}${attrString}>${node.text}</${elementTag}>`;
+    return `<${elementTag}${attrString}>${node.text}</${elementTag}>`;
   }
 
-  return `${indent}<${elementTag}${attrString}></${elementTag}>`;
+  return `<${elementTag}${attrString}></${elementTag}>`;
 }
 
 export function generateReactComponent(node: SemanticTreeNode): string {
