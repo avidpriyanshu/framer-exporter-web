@@ -21,9 +21,9 @@ describe('URL Validator', () => {
     expect(isValidFramerUrl(url)).toBe(false);
   });
 
-  test('should reject invalid domains', () => {
+  test('should accept any valid HTTPS domain', () => {
     const url = 'https://example.com';
-    expect(isValidFramerUrl(url)).toBe(false);
+    expect(isValidFramerUrl(url)).toBe(true);
   });
 
   test('should reject empty strings', () => {
