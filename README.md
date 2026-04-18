@@ -118,6 +118,56 @@ See [IMPLEMENTATION.md](./IMPLEMENTATION.md) for:
 - Testing strategy
 - Deployment considerations
 
+## Stage 7: Production Code Generator
+
+Converts Framer HTML + semantic metadata into production-ready Next.js projects.
+
+**Inputs:**
+- NamedTree with semantic component names (from Stage 6)
+- HTML export from Framer
+
+**Outputs:**
+- Complete Next.js project with TypeScript
+- React components with proper prop types
+- Web Components for framework-agnostic usage
+- Design token system (JSON + CSS variables)
+- Tailwind CSS configuration
+- ESLint + Prettier setup
+
+**Key Features:**
+- ✅ AST-based code generation (@babel/types)
+- ✅ Tailwind-first styling with CSS module fallback
+- ✅ Design token extraction (colors, spacing, typography)
+- ✅ Web Components for leaf components
+- ✅ TypeScript strict mode
+- ✅ Next.js best practices
+
+### Getting Started with Generated Project
+
+```bash
+# Install dependencies
+npm install
+
+# Development server
+npm run dev
+
+# Build for production
+npm run build
+npm start
+
+# Customize design tokens
+# Edit styles/tokens.json
+# Run: npm run build:tokens
+
+# Lint code
+npm run lint
+
+# Format code
+npm run format
+```
+
+See [TOKENS.md](docs/TOKENS.md) for design token customization guide.
+
 ## 🔗 Related
 
 - [framer-exporter-core](https://github.com/avidpriyanshu/framer-exporter-core) - CLI that powers this
