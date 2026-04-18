@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import { runPipeline, type PipelineMetrics } from './pipeline';
+import { cloneSiteSource } from './export-source';
 import AdmZip from 'adm-zip';
 
 export interface SpawnResult {
@@ -61,40 +62,34 @@ export async function exportSiteWithPipeline(
   tempDir: string
 ): Promise<{ zipPath: string; pipelineMetrics: PipelineMetrics }> {
   try {
-    const { exportSite } = require('framer-exporter/src/cli');
+    // Use the unified clone-first approach with asset materialization
+    const clone = await cloneSiteSource(url, tempDir, 60000);
+    const html = clone.html;
+    const zipPath = clone.zipPath;
 
-    const zipPath = await Promise.race([
-      (async () => {
-        return await exportSite(url, tempDir);
-      })(),
-      new Promise<string>((resolve) => {
-        setTimeout(() => resolve(''), 60000);
-      }),
-    ]);
-
-    if (!zipPath) {
-      throw new Error('Export took too long. Try a simpler site.');
+    // Log asset materialization report
+    if (clone.assetReport) {
+      console.log('[CLI] Asset materialization report:', {
+        discovered: clone.assetReport.discovered,
+        downloaded: clone.assetReport.downloaded,
+        failed: clone.assetReport.failed,
+      });
     }
 
-    // Extract HTML from zip
-    const zip = new AdmZip(zipPath);
-    const htmlEntry = zip.getEntry('index.html');
-    if (!htmlEntry) {
-      throw new Error('No index.html found in export');
-    }
-
-    const html = zip.readAsText(htmlEntry);
-
-    // Run 6-stage pipeline on HTML
+    // Run 6-stage pipeline on the materialized HTML
     const pipelineResult = runPipeline(html);
 
     // Update zip with enhanced files
-    zip.updateFile(htmlEntry, Buffer.from(pipelineResult.enhancedHTML, 'utf-8'));
+    const zip = new AdmZip(zipPath);
+    const htmlEntry = zip.getEntry('index.html');
+    if (htmlEntry) {
+      zip.updateFile(htmlEntry, Buffer.from(pipelineResult.enhancedHTML, 'utf-8'));
+    }
 
     // Add component index
     zip.addFile('COMPONENT_INDEX.md', Buffer.from(pipelineResult.componentIndex, 'utf-8'));
 
-    // Re-save zip
+    // Re-save zip with pipeline enhancements
     zip.writeZip(zipPath);
 
     return {
@@ -102,7 +97,6 @@ export async function exportSiteWithPipeline(
       pipelineMetrics: pipelineResult.metrics,
     };
   } catch (error) {
-    // If pipeline fails, still return the original export with error logged
     console.error('Pipeline execution failed:', error);
     throw error;
   }

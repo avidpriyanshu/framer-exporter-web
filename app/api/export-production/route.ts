@@ -3,19 +3,26 @@ import JSZip from 'jszip';
 import { runPipeline } from '@/lib/pipeline';
 import { generateProductionCode } from '@/lib/pipeline/stages/7-code-generator';
 import { ProductionOutput } from '@/lib/pipeline/types';
+import { cloneSiteSource } from '@/lib/export-source';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 /**
  * POST /api/export-production
  *
  * Handles the complete export workflow:
- * 1. Fetch Framer HTML from provided URL
- * 2. Run pipeline (Stages 1-6: Parse, Normalize, Detect, Extract, Name, Verify)
- * 3. Generate Stage 7 production code
- * 4. Create Next.js project files
- * 5. Package as ZIP archive
- * 6. Return as downloadable file
+ * 1. Clone the source site via the canonical exporter path
+ * 2. Extract HTML from the raw clone artifact
+ * 3. Run pipeline (Stages 1-6: Parse, Normalize, Detect, Extract, Name, Verify)
+ * 4. Generate Stage 7 production code
+ * 5. Create Next.js project files
+ * 6. Package as ZIP archive
+ * 7. Return as downloadable file
  */
 export async function POST(req: NextRequest) {
+  let tempDir: string | undefined;
+
   try {
     const { url } = await req.json();
 
@@ -37,47 +44,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`[API] Starting export for URL: ${url}`);
+    console.log(`[API] Starting production export for URL: ${url}`);
 
-    // Step 1: Fetch Framer HTML from URL
+    // Step 1: Clone the source site with the canonical exporter flow.
+    // Every transformation should start from the same raw artifact the basic export uses.
+    tempDir = path.join(os.tmpdir(), `framer-production-export-${Date.now()}`);
+    fs.mkdirSync(tempDir, { recursive: true });
+
     let html: string;
+    let sourceZipPath: string | undefined;
+
     try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; FramerExporter/1.0)',
-        },
-        signal: AbortSignal.timeout(30000), // 30 second timeout
-      });
-
-      if (!response.ok) {
-        return NextResponse.json(
-          { error: `Failed to fetch URL: ${response.statusText}` },
-          { status: 502 }
-        );
+      const clone = await cloneSiteSource(url, tempDir, 60000);
+      html = clone.html;
+      sourceZipPath = clone.zipPath;
+      if (clone.assetReport) {
+        console.log('[API] Asset materialization report:', {
+          discovered: clone.assetReport.discovered,
+          downloaded: clone.assetReport.downloaded,
+          failed: clone.assetReport.failed,
+        });
+        if (clone.assetReport.failedAssets?.length) {
+          console.log('[API] Failed assets:', clone.assetReport.failedAssets.slice(0, 5));
+        }
       }
-
-      html = await response.text();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[API] Fetch error:', errorMessage);
+      console.error('[API] Clone error:', errorMessage);
       return NextResponse.json(
-        { error: 'Failed to fetch Framer HTML: ' + errorMessage },
+        { error: 'Failed to clone source site: ' + errorMessage },
         { status: 502 }
-      );
-    }
-
-    // Validate HTML content
-    if (!html || html.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Invalid or empty HTML content' },
-        { status: 400 }
       );
     }
 
     // Step 2: Run pipeline stages 1-6
     console.log('[API] Running pipeline stages 1-6...');
-    const pipelineResult = runPipeline(html);
+    runPipeline(html);
 
     // Extract the NamedTree from pipeline (we need it for Stage 7)
     // The pipeline runs stages 1-6 and we need to get the NamedTree output
@@ -168,6 +170,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/zip',
         'Content-Disposition': 'attachment; filename="framer-export.zip"',
         'X-Suggested-Filename': 'framer-export.zip',
+        'X-Source-Clone': sourceZipPath ? 'cli-export' : 'unknown',
         'Content-Length': String(Buffer.byteLength(zipBuffer)),
       },
     });
@@ -183,6 +186,10 @@ export async function POST(req: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    if (tempDir && fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   }
 }
 
