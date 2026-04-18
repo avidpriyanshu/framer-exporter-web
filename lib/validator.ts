@@ -11,9 +11,9 @@ export function isValidFramerUrl(url: string): boolean {
       return false;
     }
 
-    // Check for framer.com or webflow.io
+    // Check for framer.com, framer.app, or webflow.io
     const hostname = parsed.hostname;
-    const isFramer = hostname === 'framer.com' || hostname.endsWith('.framer.com');
+    const isFramer = hostname === 'framer.com' || hostname.endsWith('.framer.com') || hostname.endsWith('.framer.app');
     const isWebflow = hostname.endsWith('.webflow.io');
 
     return isFramer || isWebflow;

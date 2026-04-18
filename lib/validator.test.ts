@@ -11,6 +11,11 @@ describe('URL Validator', () => {
     expect(isValidFramerUrl(url)).toBe(true);
   });
 
+  test('should accept valid framer.app URLs', () => {
+    const url = 'https://authentic-travelers-434120.framer.app/';
+    expect(isValidFramerUrl(url)).toBe(true);
+  });
+
   test('should reject URLs without https', () => {
     const url = 'http://framer.com/example';
     expect(isValidFramerUrl(url)).toBe(false);
