@@ -43,12 +43,78 @@ function isLeafComponent(node: SemanticTreeNode): boolean {
 }
 
 /**
+ * Converts HTML attribute names to React camelCase equivalents
+ * Maps common HTML attributes to their React names
+ */
+export function convertAttributeToReact(name: string): string {
+  const attributeMap: Record<string, string> = {
+    'tabindex': 'tabIndex',
+    'contenteditable': 'contentEditable',
+    'spellcheck': 'spellCheck',
+    'readonly': 'readOnly',
+    'maxlength': 'maxLength',
+    'for': 'htmlFor',
+    'class': 'className',
+    'autofocus': 'autoFocus',
+    'autocomplete': 'autoComplete',
+    'formaction': 'formAction',
+    'formenctype': 'formEncType',
+    'formmethod': 'formMethod',
+    'formnovalidate': 'formNoValidate',
+    'formtarget': 'formTarget',
+    'novalidate': 'noValidate',
+    'accept-charset': 'acceptCharset',
+    'http-equiv': 'httpEquiv',
+  };
+
+  return attributeMap[name.toLowerCase()] || name;
+}
+
+/**
+ * Checks if a tag is a valid HTML element
+ */
+export function isValidHTMLElement(tag: string): boolean {
+  const validElements = new Set([
+    'div', 'span', 'p', 'a', 'button', 'input', 'img', 'svg', 'ul', 'ol', 'li',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'nav', 'section', 'article',
+    'form', 'label', 'textarea', 'select', 'option', 'table', 'tr', 'td', 'th',
+    'iframe', 'video', 'audio', 'canvas', 'main', 'aside', 'footer', 'address',
+    'blockquote', 'code', 'pre', 'hr', 'br', 'strong', 'em', 'b', 'i', 'u',
+    'small', 'mark', 'del', 'ins', 'sub', 'sup', 'figure', 'figcaption',
+  ]);
+  return validElements.has(tag.toLowerCase());
+}
+
+/**
+ * Maps invalid/Framer-specific elements to valid HTML elements
+ */
+export function mapInvalidElement(tag: string): string {
+  const mapping: Record<string, string> = {
+    'text': 'span',           // Framer text element
+    'component': 'div',       // Framer component
+    'frame': 'div',           // Framer frame
+    'group': 'div',           // Framer group
+    'instance': 'div',        // Framer instance
+    'scrollcontainer': 'div', // Framer scroll
+  };
+
+  return mapping[tag.toLowerCase()] || 'div';  // Default to div
+}
+
+/**
  * Converts a SemanticTreeNode into JSX content
  * Handles nested elements, text content, attributes, and styles
+ * Properly converts HTML attributes to React camelCase syntax
  */
 function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
   const indent = '  '.repeat(depth);
   const nextIndent = '  '.repeat(depth + 1);
+
+  // Validate and map element tag
+  let elementTag = node.tag;
+  if (!isValidHTMLElement(elementTag)) {
+    elementTag = mapInvalidElement(elementTag);
+  }
 
   // Build attributes string
   const attrs: string[] = [];
@@ -62,15 +128,26 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
   // Add other HTML attributes (excluding style which was processed)
   Object.entries(node.attributes).forEach(([key, value]) => {
     if (key !== 'style' && key !== 'class' && !key.startsWith('data-component')) {
-      // Handle special attributes
-      if (key === 'onclick' || key === 'onchange' || key === 'onsubmit') {
-        // Convert to React event handler syntax
-        const eventName = 'on' + key.substring(2);
-        attrs.push(`${eventName}={handleEvent}`);
+      // Convert HTML attribute to React format
+      const reactAttrName = convertAttributeToReact(key);
+
+      // Skip event handlers (onclick, onchange, etc.) - convert to React event syntax
+      if (key.toLowerCase().startsWith('on')) {
+        // For onclick → onClick, onchange → onChange, etc.
+        const eventName = key.substring(2).charAt(0).toUpperCase() + key.substring(3);
+        attrs.push(`on${eventName}={() => {}}`);
       } else if (key.startsWith('data-')) {
+        // Data attributes remain as-is
         attrs.push(`${key}="${value}"`);
+      } else if (value === 'true' || value === 'false') {
+        // Boolean attributes
+        attrs.push(`${reactAttrName}={${value}}`);
+      } else if (!isNaN(Number(value)) && value !== '') {
+        // Numeric attributes
+        attrs.push(`${reactAttrName}={${value}}`);
       } else {
-        attrs.push(`${key}="${value}"`);
+        // String attributes
+        attrs.push(`${reactAttrName}="${value}"`);
       }
     }
   });
@@ -85,11 +162,11 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
   // Handle self-closing tags or empty elements
   if (!hasChildren && !hasText) {
     // Check if this is a self-closing tag
-    const selfClosingTags = ['input', 'img', 'br', 'hr', 'meta', 'link'];
-    if (selfClosingTags.includes(node.tag)) {
-      return `<${node.tag}${attrString} />`;
+    const selfClosingTags = new Set(['input', 'img', 'br', 'hr', 'meta', 'link']);
+    if (selfClosingTags.has(elementTag)) {
+      return `<${elementTag}${attrString} />`;
     }
-    return `<${node.tag}${attrString}></${node.tag}>`;
+    return `<${elementTag}${attrString}></${elementTag}>`;
   }
 
   // Build the content (text + children)
@@ -112,19 +189,19 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
   const isSingleLine = !hasChildren && hasText && node.text && node.text.length < 60;
 
   if (isSingleLine && node.text) {
-    return `<${node.tag}${attrString}>${node.text}</${node.tag}>`;
+    return `<${elementTag}${attrString}>${node.text}</${elementTag}>`;
   }
 
   // Multi-line format
   if (hasChildren || (hasText && node.text && node.text.length >= 60)) {
-    return `<${node.tag}${attrString}>\n${nextIndent}${content}\n${indent}</${node.tag}>`;
+    return `<${elementTag}${attrString}>\n${nextIndent}${content}\n${indent}</${elementTag}>`;
   }
 
   if (hasText && node.text) {
-    return `<${node.tag}${attrString}>${node.text}</${node.tag}>`;
+    return `<${elementTag}${attrString}>${node.text}</${elementTag}>`;
   }
 
-  return `<${node.tag}${attrString}></${node.tag}>`;
+  return `<${elementTag}${attrString}></${elementTag}>`;
 }
 
 export function generateReactComponent(node: SemanticTreeNode): string {

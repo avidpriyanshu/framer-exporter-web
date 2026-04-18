@@ -20,6 +20,79 @@ describe('generateReactComponent', () => {
     expect(code).not.toContain('auto-generated');
   });
 
+  it('should convert HTML attributes to React camelCase', () => {
+    const node: SemanticTreeNode = {
+      tag: 'input',
+      semanticName: 'FormInput',
+      attributes: {
+        tabindex: '0',
+        readonly: 'true',
+        maxlength: '100',
+        autocomplete: 'off',
+      },
+      children: [],
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('tabIndex={0}');
+    expect(code).not.toContain('tabindex=');
+    expect(code).toContain('readOnly={true}');
+    expect(code).not.toContain('readonly=');
+    expect(code).toContain('maxLength={100}');
+    expect(code).not.toContain('maxlength=');
+    expect(code).toContain('autoComplete=');
+    expect(code).not.toContain('autocomplete=');
+  });
+
+  it('should map invalid Framer elements to valid HTML', () => {
+    const node: SemanticTreeNode = {
+      tag: 'text',
+      semanticName: 'TextElement',
+      attributes: {},
+      children: [],
+      text: 'Book a call',
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('<span>');
+    expect(code).toContain('Book a call');
+    expect(code).toContain('</span>');
+    expect(code).not.toContain('<text>');
+  });
+
+  it('should handle onclick event handler properly', () => {
+    const node: SemanticTreeNode = {
+      tag: 'button',
+      semanticName: 'ActionButton',
+      attributes: {
+        onclick: 'handleClick',
+      },
+      children: [],
+      text: 'Action',
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('onClick={() => {}}');
+    expect(code).not.toContain('onclick=');
+  });
+
+  it('should handle onchange event handler properly', () => {
+    const node: SemanticTreeNode = {
+      tag: 'input',
+      semanticName: 'FormField',
+      attributes: {
+        onchange: 'handleChange',
+        type: 'text',
+      },
+      children: [],
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('onChange={() => {}}');
+    expect(code).not.toContain('onchange=');
+    expect(code).toContain('type=');
+  });
+
   it('should include TypeScript props interface when props exist', () => {
     const node: SemanticTreeNode = {
       tag: 'button',
@@ -176,5 +249,166 @@ describe('generateReactComponent', () => {
     expect(code).toContain('Email:');
     expect(code).toContain('<input');
     expect(code).toContain('type=');
+  });
+
+  it('should map frame element to div', () => {
+    const node: SemanticTreeNode = {
+      tag: 'frame',
+      semanticName: 'Card',
+      attributes: {},
+      children: [],
+      text: 'Frame content',
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('<div');
+    expect(code).not.toContain('<frame>');
+    expect(code).toContain('Frame content');
+  });
+
+  it('should map group element to div', () => {
+    const node: SemanticTreeNode = {
+      tag: 'group',
+      semanticName: 'Group',
+      attributes: {},
+      children: [],
+      text: 'Group content',
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('<div');
+    expect(code).not.toContain('<group>');
+  });
+
+  it('should handle multiple invalid elements in nested tree', () => {
+    const node: SemanticTreeNode = {
+      tag: 'frame',
+      semanticName: 'Container',
+      attributes: {},
+      children: [
+        {
+          tag: 'text',
+          semanticName: undefined,
+          attributes: {},
+          children: [],
+          text: 'Title',
+        },
+        {
+          tag: 'group',
+          semanticName: undefined,
+          attributes: {},
+          children: [],
+          text: 'Content',
+        },
+      ],
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('<div');
+    expect(code).toContain('<span>');
+    expect(code).toContain('Title');
+    expect(code).toContain('Content');
+    expect(code).not.toContain('<frame>');
+    expect(code).not.toContain('<text>');
+    expect(code).not.toContain('<group>');
+  });
+
+  it('should handle link with tabindex and rel attributes', () => {
+    const node: SemanticTreeNode = {
+      tag: 'a',
+      semanticName: 'Link',
+      attributes: {
+        href: '/contact',
+        tabindex: '0',
+        rel: 'noopener noreferrer',
+      },
+      children: [],
+      text: 'Click here',
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('<a');
+    expect(code).toContain('href="/contact"');
+    expect(code).toContain('tabIndex={0}');
+    expect(code).not.toContain('tabindex=');
+    expect(code).toContain('rel=');
+    expect(code).toContain('Click here');
+  });
+
+  it('should preserve data attributes as-is', () => {
+    const node: SemanticTreeNode = {
+      tag: 'div',
+      semanticName: 'DataDiv',
+      attributes: {
+        'data-highlight': 'true',
+        'data-framer-name': 'Element',
+      },
+      children: [],
+      text: 'Data element',
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('data-highlight=');
+    expect(code).toContain('data-framer-name=');
+  });
+
+  it('should handle for attribute conversion to htmlFor', () => {
+    const node: SemanticTreeNode = {
+      tag: 'label',
+      semanticName: 'Label',
+      attributes: {
+        for: 'email-input',
+      },
+      children: [],
+      text: 'Email',
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('htmlFor=');
+    expect(code).not.toContain('for=');
+  });
+
+  it('should handle nested text element (Framer-specific)', () => {
+    const node: SemanticTreeNode = {
+      tag: 'p',
+      semanticName: 'P821',
+      attributes: { 'data-styles-preset': 'wAv3gn1J4' },
+      children: [
+        {
+          tag: 'text',
+          semanticName: undefined,
+          attributes: {},
+          children: [],
+          text: 'Revisions and feedback are crucial.',
+        },
+      ],
+    };
+
+    const code = generateReactComponent(node);
+    // Should convert <text> to <span>
+    expect(code).toContain('<span>');
+    expect(code).toContain('Revisions and feedback');
+    expect(code).not.toContain('<text>');
+    expect(code).toContain('</span>');
+  });
+
+  it('should convert tabindex to tabIndex in links', () => {
+    const node: SemanticTreeNode = {
+      tag: 'a',
+      semanticName: 'Link',
+      attributes: {
+        href: '/contact',
+        tabindex: '0',
+        target: '_blank',
+      },
+      children: [],
+      text: 'Contact',
+    };
+
+    const code = generateReactComponent(node);
+    expect(code).toContain('tabIndex={0}');
+    expect(code).not.toContain('tabindex=');
+    expect(code).toContain('target="_blank"');
+    expect(code).toContain('href="/contact"');
   });
 });
