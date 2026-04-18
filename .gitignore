@@ -1,7 +1,9 @@
-node_modules/
-package-lock.json
-dist/
-export/
-*.zip
+node_modules
+.next
+dist
+build
 .env
+.env.local
+*.log
 .DS_Store
+.vercel
