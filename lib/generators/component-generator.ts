@@ -196,25 +196,19 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
   const isSingleLine = !hasChildren && hasText && node.text && node.text.length < 60;
 
   if (isSingleLine && node.text) {
-    return `<${elementTag}${attrString}>${node.text}</${elementTag}>`;
+    return `${indent}<${elementTag}${attrString}>${node.text}</${elementTag}>`;
   }
 
   // Multi-line format
   if (hasChildren || (hasText && node.text && node.text.length >= 60)) {
-    // Ensure proper indentation for all content lines
-    const contentLines = content.split('\n');
-    const indentedContent = contentLines.map((line, idx) => {
-      if (idx === 0) return line; // First line already has correct indentation
-      return line.startsWith(nextIndent) ? line : nextIndent + line;
-    }).join('\n');
-    return `<${elementTag}${attrString}>\n${nextIndent}${indentedContent}\n${indent}</${elementTag}>`;
+    return `${indent}<${elementTag}${attrString}>\n${nextIndent}${content}\n${indent}</${elementTag}>`;
   }
 
   if (hasText && node.text) {
-    return `<${elementTag}${attrString}>${node.text}</${elementTag}>`;
+    return `${indent}<${elementTag}${attrString}>${node.text}</${elementTag}>`;
   }
 
-  return `<${elementTag}${attrString}></${elementTag}>`;
+  return `${indent}<${elementTag}${attrString}></${elementTag}>`;
 }
 
 export function generateReactComponent(node: SemanticTreeNode): string {
