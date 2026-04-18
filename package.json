@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "jest"
+    "test": "jest",
+    "verify:live-export": "node scripts/verify-live-export.mjs",
+    "verify:materialized-export": "node scripts/verify-materialized-export.mjs"
   },
   "dependencies": {
     "@types/jszip": "^3.4.0",

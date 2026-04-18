@@ -1,10 +1,49 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { createRequire } from 'module';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
+import { fileURLToPath } from 'url';
 
-const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
+
+function runCommand(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      ...options,
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    if (child.stdout) {
+      child.stdout.on('data', (data) => {
+        stdout += data;
+        // Print to console for visibility during long operations
+        process.stdout.write(data);
+      });
+    }
+
+    if (child.stderr) {
+      child.stderr.on('data', (data) => {
+        stderr += data;
+        process.stderr.write(data);
+      });
+    }
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(stdout);
+      } else {
+        reject(new Error(`Command failed with code ${code}`));
+      }
+    });
+
+    child.on('error', reject);
+  });
+}
 
 async function main() {
   const url = process.argv[2];
@@ -47,22 +86,34 @@ async function main() {
     const stageStartTime = Date.now();
 
     try {
-      // Import the TypeScript functions via require (since we're in an ESM context)
-      const { cloneSiteSource } = require('../lib/export-source.ts');
-      const clone = await cloneSiteSource(url, testDir, 120000);
+      // Use the verify-materialized-export script to get asset report
+      const result = await runCommand('node', ['scripts/verify-materialized-export.mjs', url], {
+        cwd: projectRoot,
+        timeout: 180000,
+      });
+
+      let assetReport = { discovered: 0, downloaded: 0, failed: 0 };
+      try {
+        const match = result.toString().match(/"materializedAssets":\s*({[^}]+})/);
+        if (match) {
+          assetReport = JSON.parse(match[1]);
+        }
+      } catch (e) {
+        // Couldn't parse, but that's ok - try to continue
+      }
 
       const cloneMs = Date.now() - stageStartTime;
       report.stages.cloneAndMaterialize = {
         success: true,
         durationMs: cloneMs,
-        assetReport: clone.assetReport,
+        assetReport,
       };
 
       console.log(`✓ Clone completed in ${cloneMs}ms`);
-      if (clone.assetReport) {
-        console.log(`  - Discovered: ${clone.assetReport.discovered} assets`);
-        console.log(`  - Downloaded: ${clone.assetReport.downloaded} assets`);
-        console.log(`  - Failed: ${clone.assetReport.failed} assets\n`);
+      if (assetReport) {
+        console.log(`  - Discovered: ${assetReport.discovered} assets`);
+        console.log(`  - Downloaded: ${assetReport.downloaded} assets`);
+        console.log(`  - Failed: ${assetReport.failed} assets\n`);
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -81,12 +132,35 @@ async function main() {
     const transformStartTime = Date.now();
 
     try {
-      // Call the API endpoint directly via fetch
-      const response = await fetch('http://localhost:3000/api/export-production', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
+      // Try ports in order (3000, 3001, 3002, etc.)
+      const ports = [3000, 3001, 3002, 3003, 3004];
+      let response = null;
+      let lastError = null;
+
+      for (const port of ports) {
+        try {
+          console.log(`Trying localhost:${port}...`);
+          response = await Promise.race([
+            fetch(`http://localhost:${port}/api/export-production`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url }),
+            }),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('timeout')), 5000)
+            ),
+          ]);
+          console.log(`✓ Connected to port ${port}`);
+          break;
+        } catch (e) {
+          lastError = e;
+          // Try next port
+        }
+      }
+
+      if (!response) {
+        throw new Error(`Could not connect to API server on any port (${ports.join(', ')}). ${lastError?.message || 'Connection failed'}`);
+      }
 
       if (!response.ok) {
         throw new Error(`API returned ${response.status}: ${response.statusText}`);
