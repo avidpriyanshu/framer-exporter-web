@@ -1,4 +1,3 @@
-import * as path from 'path';
 import * as fs from 'fs';
 
 export interface SpawnResult {
@@ -14,7 +13,6 @@ export async function spawnExporter(
 ): Promise<SpawnResult> {
   try {
     const { exportSite } = require('framer-exporter/src/cli');
-    const zipPath = path.join(outputDir, 'export.zip');
 
     const timeoutPromise = new Promise<SpawnResult>((resolve) => {
       setTimeout(() => {
@@ -27,8 +25,8 @@ export async function spawnExporter(
 
     const exportPromise = (async () => {
       try {
-        await exportSite(url, outputDir);
-        if (fs.existsSync(zipPath)) {
+        const zipPath = await exportSite(url, outputDir);
+        if (zipPath && fs.existsSync(zipPath)) {
           return {
             success: true,
             zipPath,
@@ -36,7 +34,7 @@ export async function spawnExporter(
         } else {
           return {
             success: false,
-            error: 'Export completed but zip file not found.',
+            error: 'Export failed to create zip file.',
           };
         }
       } catch (error) {
