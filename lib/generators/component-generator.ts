@@ -81,6 +81,10 @@ export function isValidHTMLElement(tag: string): boolean {
     'iframe', 'video', 'audio', 'canvas', 'main', 'aside', 'footer', 'address',
     'blockquote', 'code', 'pre', 'hr', 'br', 'strong', 'em', 'b', 'i', 'u',
     'small', 'mark', 'del', 'ins', 'sub', 'sup', 'figure', 'figcaption',
+    // SVG elements
+    'g', 'line', 'polyline', 'polygon', 'circle', 'rect', 'ellipse', 'path',
+    'text', 'tspan', 'defs', 'use', 'symbol', 'clipPath', 'mask', 'linearGradient',
+    'radialGradient', 'stop', 'pattern', 'style', 'desc', 'title',
   ]);
   return validElements.has(tag.toLowerCase());
 }
@@ -125,11 +129,14 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
     attrs.push(`className="${styles.tailwindClasses.join(' ')}"`);
   }
 
-  // Add other HTML attributes (excluding style which was processed)
+  // Check if this is an SVG element (SVG elements don't need camelCase conversion)
+  const isSVGElement = elementTag === 'svg' || ['g', 'line', 'polyline', 'polygon', 'circle', 'rect', 'ellipse', 'path', 'text', 'tspan', 'defs', 'use', 'symbol', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'stop', 'pattern'].includes(elementTag);
+
+  // Add other HTML/SVG attributes (excluding style which was processed)
   Object.entries(node.attributes).forEach(([key, value]) => {
     if (key !== 'style' && key !== 'class' && !key.startsWith('data-component')) {
-      // Convert HTML attribute to React format
-      const reactAttrName = convertAttributeToReact(key);
+      // SVG attributes preserve their names (stroke-width stays as-is, not stroked-width)
+      const attrName = isSVGElement ? key : convertAttributeToReact(key);
 
       // Skip event handlers (onclick, onchange, etc.) - convert to React event syntax
       if (key.toLowerCase().startsWith('on')) {
@@ -141,13 +148,13 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
         attrs.push(`${key}="${value}"`);
       } else if (value === 'true' || value === 'false') {
         // Boolean attributes
-        attrs.push(`${reactAttrName}={${value}}`);
+        attrs.push(`${attrName}={${value}}`);
       } else if (!isNaN(Number(value)) && value !== '') {
         // Numeric attributes
-        attrs.push(`${reactAttrName}={${value}}`);
+        attrs.push(`${attrName}={${value}}`);
       } else {
         // String attributes
-        attrs.push(`${reactAttrName}="${value}"`);
+        attrs.push(`${attrName}="${value}"`);
       }
     }
   });
