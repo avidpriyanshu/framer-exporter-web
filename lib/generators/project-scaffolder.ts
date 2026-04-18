@@ -97,7 +97,6 @@ function generateNextConfig(): Record<string, any> {
   return {
     reactStrictMode: true,
     images: {
-      optimization: 'auto',
       formats: ['image/avif', 'image/webp'],
     },
     webpack: {
