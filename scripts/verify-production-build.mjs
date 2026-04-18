@@ -147,11 +147,20 @@ async function main() {
               body: JSON.stringify({ url }),
             }),
             new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('timeout')), 5000)
+              setTimeout(() => reject(new Error('timeout')), 120000)
             ),
           ]);
-          console.log(`✓ Connected to port ${port}`);
-          break;
+          console.log(`✓ Connected to port ${port} (status: ${response.status})`);
+          if (response.ok) {
+            break;
+          } else {
+            // Port responded but with error - try next port
+            const text = await response.text();
+            console.log(`  Response: ${response.status} ${response.statusText}`);
+            console.log(`  Body preview: ${text.substring(0, 100)}`);
+            lastError = new Error(`Port ${port} responded with ${response.status}`);
+            response = null;
+          }
         } catch (e) {
           lastError = e;
           // Try next port
@@ -204,7 +213,7 @@ async function main() {
     const unzipStartTime = Date.now();
 
     try {
-      const AdmZip = require('adm-zip');
+      const { default: AdmZip } = await import('adm-zip');
       const zipPath = path.join(testDir, 'export.zip');
       const zip = new AdmZip(zipPath);
 
