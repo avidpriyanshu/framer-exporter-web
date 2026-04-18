@@ -101,7 +101,7 @@
 
   <script>
     // CONFIGURATION: Change this URL to use your own portrait image
-    const PORTRAIT_IMAGE_URL = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&h=600&fit=crop';
+    const PORTRAIT_IMAGE_URL = 'https://images.pexels.com/photos/28333569/pexels-photo-28333569.jpeg';
 
     let scrollProgress = 0;
     window.addEventListener('scroll', () => {
@@ -140,18 +140,37 @@
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
 
-        // Sample image to create particle positions
+        // Enhance contrast before sampling
+        const contrastCanvas = document.createElement('canvas');
+        contrastCanvas.width = canvas.width;
+        contrastCanvas.height = canvas.height;
+        const contrastCtx = contrastCanvas.getContext('2d');
+        contrastCtx.putImageData(imageData, 0, 0);
+
+        // Apply contrast enhancement
+        const contrastImageData = contrastCtx.getImageData(0, 0, canvas.width, canvas.height);
+        const contrastData = contrastImageData.data;
+        const contrast = 2.5;
+        const intercept = 128 * (1 - contrast) / 2;
+
+        for (let i = 0; i < contrastData.length; i += 4) {
+          contrastData[i] = Math.max(0, Math.min(255, contrastData[i] * contrast + intercept));
+          contrastData[i + 1] = Math.max(0, Math.min(255, contrastData[i + 1] * contrast + intercept));
+          contrastData[i + 2] = Math.max(0, Math.min(255, contrastData[i + 2] * contrast + intercept));
+        }
+
+        // Sample enhanced image to create particle positions
         const positions = [];
         const colors = [];
-        const spacing = 4; // Distance between particles
+        const spacing = 3; // Distance between particles
 
         for (let y = 0; y < canvas.height; y += spacing) {
           for (let x = 0; x < canvas.width; x += spacing) {
             const index = (y * canvas.width + x) * 4;
-            const brightness = (data[index] + data[index + 1] + data[index + 2]) / 3 / 255;
+            const brightness = (contrastData[index] + contrastData[index + 1] + contrastData[index + 2]) / 3 / 255;
 
             // Only create particles where image is dark (content)
-            if (brightness < 0.7) {
+            if (brightness < 0.45) {
               positions.push(
                 (x - canvas.width / 2) * 0.5,
                 -(y - canvas.height / 2) * 0.5,
