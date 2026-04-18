@@ -15,9 +15,12 @@ export function spawnExporter(
 ): Promise<SpawnResult> {
   return new Promise((resolve) => {
     const zipPath = path.join(outputDir, 'export.zip');
+    let child: any;
 
     const timeout = setTimeout(() => {
-      child.kill();
+      if (child) {
+        child.kill();
+      }
       resolve({
         success: false,
         error: 'Export took too long. Try a simpler site.',
@@ -25,7 +28,7 @@ export function spawnExporter(
     }, timeoutMs);
 
     try {
-      const child = spawn('node', [
+      child = spawn('node', [
         require.resolve('../node_modules/.bin/framer-exporter'),
         `--url=${url}`,
         `--output=${zipPath}`,
@@ -33,11 +36,11 @@ export function spawnExporter(
 
       let stderr = '';
 
-      child.stderr.on('data', (data) => {
+      child.stderr.on('data', (data: Buffer) => {
         stderr += data.toString();
       });
 
-      child.on('close', (code) => {
+      child.on('close', (code: number) => {
         clearTimeout(timeout);
 
         if (code === 0 && fs.existsSync(zipPath)) {
@@ -53,7 +56,7 @@ export function spawnExporter(
         }
       });
 
-      child.on('error', (err) => {
+      child.on('error', (err: Error) => {
         clearTimeout(timeout);
         resolve({
           success: false,
