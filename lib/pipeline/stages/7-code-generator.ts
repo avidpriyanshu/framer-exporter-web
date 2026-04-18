@@ -1,6 +1,6 @@
 import { NamedTree, ProductionOutput, SemanticTreeNode, EnhancedComponent } from '../types';
 import { scaffoldNextjsProject } from '../../generators/project-scaffolder';
-import { detectComponentBoundaries, ComponentBoundary } from '../../generators/component-generator';
+import { detectComponentBoundaries, ComponentBoundary, generateReactComponent } from '../../generators/component-generator';
 import { extractDesignTokens, generateTokenCSS } from '../../generators/token-generator';
 import { extractAndMapStyles } from '../../generators/style-generator';
 import { validateGeneratedCode } from '../../generators/validator';
@@ -82,40 +82,13 @@ function serializeTree(node: SemanticTreeNode): string {
 
 /**
  * Generates React component code from a component boundary
+ * Uses the improved generateReactComponent function to produce actual JSX content
  */
 function generateComponentCode(boundary: ComponentBoundary): string {
   const { name, node } = boundary;
-  const styles = extractAndMapStyles(node);
-  const props = extractComponentProps(node);
 
-  // Build className from Tailwind classes
-  const className = styles.tailwindClasses.length > 0
-    ? ` className="${styles.tailwindClasses.join(' ')}"`
-    : '';
-
-  // Import statements
-  const imports = ['import React from "react";'];
-
-  // Props interface
-  const propsInterface = props.length > 0
-    ? `\ninterface ${name}Props {
-${props.map((p) => `  ${p}: any;`).join('\n')}
-}\n`
-    : '';
-
-  // Component function
-  const componentCode = `export default function ${name}(${props.length > 0 ? `props: ${name}Props` : ''}) {
-  return (
-    <div${className}>
-      {/* Component content - auto-generated */}
-    </div>
-  );
-}`;
-
-  // Combine all parts
-  const code = [imports.join('\n'), propsInterface, componentCode].filter(Boolean).join('\n');
-
-  return code;
+  // Use the improved component generator that produces actual JSX
+  return generateReactComponent(node);
 }
 
 /**
