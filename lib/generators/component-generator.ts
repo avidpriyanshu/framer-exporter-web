@@ -242,12 +242,20 @@ ${propsInterfaceBody}
     ? `export default function ${componentName}(${destructuredProps}: ${componentName}Props) {`
     : `export default function ${componentName}() {`;
 
-  // Build component code
+  // Build component code with proper indentation
+  const jsxLines = jsxContent.split('\n');
+  const indentedJSX = jsxLines.map((line, idx) => {
+    if (idx === 0) return '    ' + line; // First line gets 4 spaces
+    if (line === '') return ''; // Keep empty lines
+    // Subsequent lines already have their indent, but need base 4 spaces
+    return '    ' + line;
+  }).join('\n');
+
   const code = `import React from 'react';
 
 ${propsInterface}${functionSignature}
   return (
-    ${jsxContent}
+${indentedJSX}
   );
 }
 `;
