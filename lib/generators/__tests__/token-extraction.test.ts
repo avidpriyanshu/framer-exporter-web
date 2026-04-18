@@ -41,7 +41,7 @@ describe('extractDesignTokens', () => {
       colors: { primary: '#0066FF' },
       spacing: { md: '16px' },
       typography: { body: { fontSize: '16px', fontFamily: 'Inter' } },
-      borders: { sm: '4px' },
+      borders: { sm: { width: '4px' } },
       shadows: {},
     };
     const json = generateTokenJSON(tokens);

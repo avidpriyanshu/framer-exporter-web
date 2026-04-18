@@ -11,10 +11,10 @@ describe('Stage 7: Production Code Generator Integration', () => {
         {
           tag: 'button',
           semanticName: 'Button',
-          attributes: { class: 'btn-primary' },
+          attributes: { class: 'btn-primary' } as Record<string, string>,
           children: [],
           text: 'Click me',
-        },
+        } as SemanticTreeNode,
       ],
     };
 
@@ -40,9 +40,9 @@ describe('Stage 7: Production Code Generator Integration', () => {
         {
           tag: 'div',
           semanticName: 'Card',
-          attributes: { style: 'padding: 16px' },
+          attributes: { style: 'padding: 16px' } as Record<string, string>,
           children: [],
-        },
+        } as SemanticTreeNode,
       ],
     };
 
