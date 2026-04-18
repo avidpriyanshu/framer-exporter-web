@@ -176,44 +176,41 @@ function validateImports(code: string): string[] {
 }
 
 /**
- * Formats code with basic Prettier-like rules.
- * - Adds line breaks after semicolons
- * - Adds line breaks after opening braces
- * - Adds line breaks before closing braces
- * - Indents properly
+ * Formats code with basic formatting rules while preserving syntax.
+ * Conservative approach: only normalize indentation, don't insert aggressive newlines.
+ * This prevents breaking function signatures with destructured parameters.
  */
 export function formatCode(code: string): string {
-  let result = code;
+  const lines = code.split('\n');
 
-  // Add newline after semicolons (but not inside strings)
-  result = result.replace(/;(?=\S)/g, ';\n');
-
-  // Add newline and indentation after opening braces
-  result = result.replace(/{(?=\S)/g, ' {\n');
-
-  // Add newline before closing braces
-  result = result.replace(/(?<!{)}/g, '\n}');
-
-  // Split into lines, trim each, and filter empty lines
-  const lines = result
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  // Basic indentation
+  // Apply indentation based on brace/bracket depth
   let indentLevel = 0;
   const formattedLines = lines.map((line) => {
-    // Decrease indent for closing braces
-    if (line.startsWith('}')) {
+    const trimmed = line.trim();
+
+    // Skip empty lines
+    if (trimmed.length === 0) {
+      return '';
+    }
+
+    // Adjust indent before the line
+    // Decrease indent for lines starting with closing bracket/brace
+    if (trimmed.startsWith('}') || trimmed.startsWith(']') || trimmed.startsWith(')')) {
       indentLevel = Math.max(0, indentLevel - 1);
     }
 
-    const indented = '  '.repeat(indentLevel) + line;
+    const indented = '  '.repeat(indentLevel) + trimmed;
 
-    // Increase indent for opening braces
-    if (line.endsWith('{')) {
-      indentLevel++;
-    }
+    // Adjust indent after the line based on balance
+    const openBraces = (trimmed.match(/{/g) || []).length;
+    const closeBraces = (trimmed.match(/}/g) || []).length;
+    const openBrackets = (trimmed.match(/\[/g) || []).length;
+    const closeBrackets = (trimmed.match(/]/g) || []).length;
+    const openParens = (trimmed.match(/\(/g) || []).length;
+    const closeParens = (trimmed.match(/\)/g) || []).length;
+
+    indentLevel += openBraces - closeBraces + openBrackets - closeBrackets + openParens - closeParens;
+    indentLevel = Math.max(0, indentLevel);
 
     return indented;
   });
