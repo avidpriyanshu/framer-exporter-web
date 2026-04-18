@@ -14,10 +14,10 @@ describe('Export API Route', () => {
     expect(data.error).toBeDefined();
   });
 
-  test('should return 400 for invalid URL', async () => {
+  test('should return 400 for non-HTTPS URL', async () => {
     const request = new NextRequest('http://localhost:3000/api/export', {
       method: 'POST',
-      body: JSON.stringify({ url: 'https://example.com' }),
+      body: JSON.stringify({ url: 'http://example.com' }),
     });
 
     const response = await POST(request);
