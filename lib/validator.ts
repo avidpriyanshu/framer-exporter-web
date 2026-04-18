@@ -11,12 +11,9 @@ export function isValidFramerUrl(url: string): boolean {
       return false;
     }
 
-    // Check for framer.com, framer.app, or webflow.io
-    const hostname = parsed.hostname;
-    const isFramer = hostname === 'framer.com' || hostname.endsWith('.framer.com') || hostname.endsWith('.framer.app');
-    const isWebflow = hostname.endsWith('.webflow.io');
-
-    return isFramer || isWebflow;
+    // Accept any HTTPS URL - let the framer-exporter CLI validate if it's actually a Framer/Webflow site
+    // This allows custom Framer domains like artone.studio
+    return true;
   } catch {
     return false;
   }
