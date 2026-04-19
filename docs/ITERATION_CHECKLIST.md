@@ -7,9 +7,10 @@
 - [ ] Fix SVG attribute generation so real-site export compiles
 
 ## Known Blockers
-- [x] Invalid `weight` prop emitted on native SVG `<g>` elements (CRITICAL)
-- [ ] Asset materialization only ~75% complete
-- [ ] Real-world validation still failing
+- [x] Invalid `weight` prop emitted on native SVG `<g>` elements (FIXED)
+- [x] `<text>` elements not converting to `<span>` (FIXED)
+- [ ] Literal curly braces in text content cause JSX syntax errors (IN PROGRESS)
+- [ ] Asset materialization only ~75% complete (SECONDARY)
 
 ## Task Breakdown
 
@@ -55,21 +56,50 @@ Property 'weight' does not exist on type 'SVGProps<SVGGElement>'.
 
 ## Iteration Log
 
-### Iteration 1: Fix SVG & Text Element Generation
-- **Goal:** Fix invalid `weight` attribute AND `<text>` to `<span>` conversion
-- **Status:** CODE CHANGES COMPLETE, RE-VALIDATING
+### Iteration 1: Fix SVG & Text Element Generation + Curly Brace Escaping
+- **Goal:** Fix invalid `weight` attribute, `<text>` to `<span>` conversion, and JSX curly brace syntax
+- **Status:** HANDOFF - 3 fixes committed, curly brace escape needs build & test
 - **Changes made:**
-  1. Added `isValidSVGAttribute()` function to filter icon library attrs (weight, mirrored)
-  2. Updated nodeToJSX to validate SVG attributes with `isInvalidSVGAttr` check
-  3. Fixed isValidHTMLElement to exclude 'text'/'tspan' from valid SVG list (allow Framer text mapping)
-  4. Now 'text' elements correctly map to 'span' via mapInvalidElement()
+  1. ✅ Added `isValidSVGAttribute()` function to filter icon library attrs (weight, mirrored, size, color)
+  2. ✅ Updated nodeToJSX to validate SVG attributes with `isInvalidSVGAttr` check
+  3. ✅ Fixed isValidHTMLElement to exclude 'text'/'tspan' from valid SVG list (allow Framer text mapping)
+  4. ✅ Text elements correctly map to 'span' via mapInvalidElement()
+  5. 🔧 Added escapeCurlyBraces() function to escape literal { } in JSX text content
+     - Converts `{` to `{'{'}`  and `}` to `{'}'}` for valid JSX
 - **Files changed:** `lib/generators/component-generator.ts`
 - **Test results:** 
   - ✅ All 79 component generation tests pass
   - ✅ SVG weight attribute filtering verified
   - ✅ Text to span conversion verified
-- **Commands run:**
-  - `npm run test` - PASS (all 79 tests)
-  - `npm run build` - SUCCESS
-  - `npm run verify:production-build <url>` - IN PROGRESS
-- **Next step:** Confirm real site builds successfully with fixes
+- **Commits:**
+  - `aa43c03` - "fix: filter invalid SVG attributes and fix text element mapping"
+  - (curly brace fix needs commit - see "To Continue" section below)
+- **Last Real-Site Error:** `A174.tsx:13:12 Expression expected` from `<span>{</span>` (needs escaping)
+
+## HANDOFF - To Continue in Next Session
+
+**What's Uncommitted:**
+```typescript
+// Added to component-generator.ts around line 163:
+function escapeCurlyBraces(text: string): string {
+  return text.replace(/([{}])/g, (match) => {
+    return match === '{' ? "{'{'}" : "{'}'}" ;
+  });
+}
+```
+
+**Where to Use It:**
+- Apply `escapeCurlyBraces()` to `node.text` when building JSX text content in nodeToJSX
+- Locations: lines ~238, ~248, ~260 where text is being added to output
+
+**Exact Steps to Complete:**
+1. `npm run build` - compile the curly brace escaping fix
+2. `npm run test` - verify all tests still pass
+3. `npm run verify:production-build -- https://authentic-travelers-434120.framer.app/ --keep-temp` - validate real site
+4. If build passes: Create commit with message: "fix: escape literal curly braces in JSX text content"
+5. Run full suite: `npm run test:gate && npm run test:e2e-fixture`
+6. Final verdict: Go/No-Go based on real-site build success
+
+**Evidence to Preserve:**
+- Test artifacts in `/var/folders/js/4m4nrg9s1_vcs0qd6pr82mf00000gn/T/framer-production-test-*` (if needed)
+- Validation logs show: clone ✅, materialize ✅, generate ✅, npm install ✅, npm build 🔄 (blocked by JSX curly braces)
