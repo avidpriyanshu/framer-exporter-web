@@ -19,6 +19,7 @@
     "@types/jszip": "^3.4.0",
     "adm-zip": "^0.5.17",
     "framer-exporter": "github:avidpriyanshu/framer-exporter-core",
+    "get-shit-done-cc": "^1.37.1",
     "jszip": "^3.10.1",
     "next": "^14.0.0",
     "react": "^18.2.0",

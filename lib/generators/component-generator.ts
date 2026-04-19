@@ -81,9 +81,9 @@ export function isValidHTMLElement(tag: string): boolean {
     'iframe', 'video', 'audio', 'canvas', 'main', 'aside', 'footer', 'address',
     'blockquote', 'code', 'pre', 'hr', 'br', 'strong', 'em', 'b', 'i', 'u',
     'small', 'mark', 'del', 'ins', 'sub', 'sup', 'figure', 'figcaption',
-    // SVG elements
+    // SVG elements (but NOT 'text' or 'tspan' - those may be Framer text elements)
     'g', 'line', 'polyline', 'polygon', 'circle', 'rect', 'ellipse', 'path',
-    'text', 'tspan', 'defs', 'use', 'symbol', 'clipPath', 'mask', 'linearGradient',
+    'defs', 'use', 'symbol', 'clipPath', 'mask', 'linearGradient',
     'radialGradient', 'stop', 'pattern', 'style', 'desc', 'title',
   ]);
   return validElements.has(tag.toLowerCase());
@@ -103,6 +103,52 @@ export function mapInvalidElement(tag: string): string {
   };
 
   return mapping[tag.toLowerCase()] || 'div';  // Default to div
+}
+
+/**
+ * Valid SVG attributes for each SVG element type
+ * Filters out icon-library-specific props like 'weight' and 'mirrored' from Phosphor icons
+ */
+const svgAttrsByElement: Record<string, Set<string>> = {
+  'svg': new Set(['xmlns', 'viewBox', 'preserveAspectRatio', 'x', 'y', 'width', 'height', 'style', 'className', 'aria-label', 'role', 'focusable']),
+  'g': new Set(['id', 'transform', 'opacity', 'fill', 'stroke', 'strokeWidth', 'strokeLinecap', 'strokeLinejoin', 'strokeDasharray', 'strokeDashoffset', 'strokeMiterlimit', 'style', 'className', 'aria-label']),
+  'path': new Set(['d', 'id', 'fill', 'stroke', 'strokeWidth', 'strokeLinecap', 'strokeLinejoin', 'strokeDasharray', 'strokeDashoffset', 'opacity', 'transform', 'style', 'className']),
+  'circle': new Set(['cx', 'cy', 'r', 'fill', 'stroke', 'strokeWidth', 'opacity', 'style', 'className']),
+  'rect': new Set(['x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth', 'rx', 'ry', 'opacity', 'style', 'className']),
+  'line': new Set(['x1', 'y1', 'x2', 'y2', 'stroke', 'strokeWidth', 'opacity', 'style', 'className']),
+  'text': new Set(['x', 'y', 'fill', 'fontSize', 'fontFamily', 'textAnchor', 'style', 'className']),
+  'tspan': new Set(['x', 'y', 'fill', 'fontSize', 'fontFamily', 'style', 'className']),
+  'linearGradient': new Set(['id', 'x1', 'y1', 'x2', 'y2']),
+  'radialGradient': new Set(['id', 'cx', 'cy', 'r']),
+  'stop': new Set(['offset', 'stopColor', 'stopOpacity']),
+  'polygon': new Set(['points', 'fill', 'stroke', 'strokeWidth', 'opacity', 'style', 'className']),
+  'polyline': new Set(['points', 'fill', 'stroke', 'strokeWidth', 'opacity', 'style', 'className']),
+};
+
+/**
+ * Checks if an attribute is valid for an SVG element
+ * Filters out icon library specific attributes like 'weight', 'mirrored'
+ */
+function isValidSVGAttribute(elementTag: string, attributeName: string): boolean {
+  // Always allow data- attributes and event handlers
+  if (attributeName.startsWith('data-') || attributeName.toLowerCase().startsWith('on')) {
+    return true;
+  }
+
+  // Filter out known icon library attributes that aren't valid SVG
+  const invalidIconLibraryAttrs = new Set(['weight', 'mirrored', 'size', 'color']);
+  if (invalidIconLibraryAttrs.has(attributeName.toLowerCase())) {
+    return false;
+  }
+
+  // Check element-specific valid attributes
+  const validAttrs = svgAttrsByElement[elementTag];
+  if (validAttrs) {
+    return validAttrs.has(attributeName) || attributeName.toLowerCase().startsWith('aria-');
+  }
+
+  // For unknown SVG elements, be permissive but filter icon lib attrs
+  return true;
 }
 
 /**
@@ -142,7 +188,10 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
     const isFormElement = ['input', 'textarea', 'select', 'button', 'form', 'label', 'option'].includes(elementTag);
     const isNameAttrOnNonForm = key === 'name' && !isFormElement;
 
-    if (key !== 'style' && key !== 'class' && !isFramerMetadata && !isNameAttrOnNonForm) {
+    // For SVG elements, validate against known valid SVG attributes
+    const isInvalidSVGAttr = isSVGElement && !isValidSVGAttribute(elementTag, key);
+
+    if (key !== 'style' && key !== 'class' && !isFramerMetadata && !isNameAttrOnNonForm && !isInvalidSVGAttr) {
       // SVG attributes preserve their names (stroke-width stays as-is, not stroked-width)
       const attrName = isSVGElement ? key : convertAttributeToReact(key);
 
