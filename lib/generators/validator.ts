@@ -181,7 +181,18 @@ function validateImports(code: string): string[] {
  * This prevents breaking function signatures with destructured parameters.
  */
 export function formatCode(code: string): string {
-  const lines = code.split('\n');
+  // First pass: add strategic newlines for minified code
+  let expanded = code
+    .replace(/;\s*/g, ';\n')           // Semicolon → newline
+    .replace(/\}\s*/g, '}\n')          // Closing brace → newline
+    .replace(/\{\s*/g, '{\n')          // Opening brace → newline
+    .replace(/\)\s*\{/g, ') {\n')      // Function signature
+    .replace(/,\s*/g, ',\n')           // Commas in object/array literals
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  const lines = expanded;
 
   // Apply indentation based on brace/bracket depth
   let indentLevel = 0;

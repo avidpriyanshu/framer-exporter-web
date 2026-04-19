@@ -190,9 +190,10 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
 
   // Add other HTML/SVG attributes (excluding style which was processed)
   Object.entries(node.attributes).forEach(([key, value]) => {
-    // Skip Framer-specific metadata and internal attributes
+    // Skip Framer-specific metadata and internal attributes (but preserve semantic data-framer-* attributes)
     const framerMetadataKeys = ['routeId', 'data-component', 'data-framer-hydrate-v2', 'data-framer-ssr-released-at', 'data-framer-page-optimized-at'];
-    const isFramerMetadata = framerMetadataKeys.includes(key) || key.startsWith('data-framer-');
+    const isFramerMetadata = framerMetadataKeys.includes(key);
+    const isSemanticFramerAttr = key === 'data-framer-name' || key === 'data-framer-id';
 
     // name attribute is only valid on form elements, not divs
     const isFormElement = ['input', 'textarea', 'select', 'button', 'form', 'label', 'option'].includes(elementTag);
@@ -201,7 +202,7 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
     // For SVG elements, validate against known valid SVG attributes
     const isInvalidSVGAttr = isSVGElement && !isValidSVGAttribute(elementTag, key);
 
-    if (key !== 'style' && key !== 'class' && !isFramerMetadata && !isNameAttrOnNonForm && !isInvalidSVGAttr) {
+    if (key !== 'style' && key !== 'class' && (!isFramerMetadata || isSemanticFramerAttr) && !isNameAttrOnNonForm && !isInvalidSVGAttr) {
       // SVG attributes preserve their names (stroke-width stays as-is, not stroked-width)
       const attrName = isSVGElement ? key : convertAttributeToReact(key);
 
