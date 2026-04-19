@@ -47,13 +47,15 @@ function runCommand(command, args, options = {}) {
 
 async function main() {
   const url = process.argv[2];
+  const keepTemp = process.argv.includes('--keep-temp');
+  const outputDir = process.argv.find((arg) => arg.startsWith('--output-dir='))?.split('=')[1];
 
   if (!url) {
-    console.error('Usage: node scripts/verify-production-build.mjs <https-url>');
+    console.error('Usage: node scripts/verify-production-build.mjs <https-url> [--keep-temp] [--output-dir=path]');
     process.exit(1);
   }
 
-  const testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'framer-production-test-'));
+  const testDir = outputDir || fs.mkdtempSync(path.join(os.tmpdir(), 'framer-production-test-'));
   const generatedAppDir = path.join(testDir, 'generated-app');
 
   console.log('\n📋 Production Build Verification');
@@ -347,8 +349,9 @@ async function main() {
     console.log('\n📁 Test artifacts preserved at:');
     console.log(`   ${testDir}\n`);
 
-    // Don't cleanup - let user inspect
-    // fs.rmSync(testDir, { recursive: true, force: true });
+    if (fs.existsSync(testDir) && !keepTemp && !outputDir) {
+      fs.rmSync(testDir, { recursive: true, force: true });
+    }
   }
 }
 

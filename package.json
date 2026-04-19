@@ -9,6 +9,7 @@
     "test": "jest",
     "test:gate": "node scripts/test-stage-7-synthetic.mjs",
     "test:stage-7-synthetic": "node scripts/test-stage-7-synthetic.mjs",
+    "test:e2e-fixture": "node scripts/test-e2e-fixture.mjs",
     "test:offline": "node scripts/test-production-offline.mjs",
     "verify:live-export": "node scripts/verify-live-export.mjs",
     "verify:materialized-export": "node scripts/verify-materialized-export.mjs",
