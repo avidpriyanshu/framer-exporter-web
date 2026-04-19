@@ -134,7 +134,11 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
 
   // Add other HTML/SVG attributes (excluding style which was processed)
   Object.entries(node.attributes).forEach(([key, value]) => {
-    if (key !== 'style' && key !== 'class' && !key.startsWith('data-component')) {
+    // Skip Framer-specific metadata and internal attributes
+    const framerMetadataKeys = ['routeId', 'data-component', 'data-framer-hydrate-v2', 'data-framer-ssr-released-at', 'data-framer-page-optimized-at'];
+    const isFramerMetadata = framerMetadataKeys.includes(key) || key.startsWith('data-framer-');
+
+    if (key !== 'style' && key !== 'class' && !isFramerMetadata) {
       // SVG attributes preserve their names (stroke-width stays as-is, not stroked-width)
       const attrName = isSVGElement ? key : convertAttributeToReact(key);
 
@@ -144,7 +148,7 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
         const eventName = key.substring(2).charAt(0).toUpperCase() + key.substring(3);
         attrs.push(`on${eventName}={() => {}}`);
       } else if (key.startsWith('data-')) {
-        // Data attributes remain as-is
+        // Data attributes remain as-is (safe ones, not Framer metadata)
         attrs.push(`${key}="${value}"`);
       } else if (value === 'true' || value === 'false') {
         // Boolean attributes

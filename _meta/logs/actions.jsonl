@@ -36,3 +36,7 @@
 {"timestamp":"2026-04-19T03:18:15Z","tool":"Edit","file":"/Users/avid/Desktop/freelance/framer-exporter/scripts/verify-production-build.mjs"}
 {"timestamp":"2026-04-19T03:18:36Z","tool":"Write","file":"/Users/avid/Desktop/freelance/framer-exporter/scripts/test-production-offline.mjs"}
 {"timestamp":"2026-04-19T03:18:40Z","tool":"Edit","file":"/Users/avid/Desktop/freelance/framer-exporter/package.json"}
+{"timestamp":"2026-04-19T03:19:17Z","tool":"Write","file":"/Users/avid/Desktop/freelance/framer-exporter/BLOCKER-RESOLUTION.md"}
+{"timestamp":"2026-04-19T03:19:57Z","tool":"Write","file":"/Users/avid/Desktop/freelance/framer-exporter/NEXT-STEPS.md"}
+{"timestamp":"2026-04-19T03:20:11Z","tool":"Write","file":"/Users/avid/Desktop/freelance/framer-exporter/FIND-TEST-SITES.md"}
+{"timestamp":"2026-04-19T03:21:27Z","tool":"Edit","file":"/Users/avid/Desktop/freelance/framer-exporter/lib/generators/component-generator.ts"}
