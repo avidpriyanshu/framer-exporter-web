@@ -7,8 +7,12 @@
     "build": "next build",
     "start": "next start",
     "test": "jest",
+    "test:gate": "node scripts/test-stage-7-synthetic.mjs",
+    "test:stage-7-synthetic": "node scripts/test-stage-7-synthetic.mjs",
+    "test:offline": "node scripts/test-production-offline.mjs",
     "verify:live-export": "node scripts/verify-live-export.mjs",
-    "verify:materialized-export": "node scripts/verify-materialized-export.mjs"
+    "verify:materialized-export": "node scripts/verify-materialized-export.mjs",
+    "verify:production-build": "node scripts/verify-production-build.mjs"
   },
   "dependencies": {
     "@types/jszip": "^3.4.0",

@@ -1,8 +1,21 @@
+#!/usr/bin/env node
+/**
+ * Offline production build test: Takes a pre-materialized clone zip and tests
+ * the production transform, generation, and build without needing the exporter.
+ *
+ * Usage:
+ *   node scripts/test-production-offline.mjs <path-to-zip>
+ *
+ * Example:
+ *   node scripts/test-production-offline.mjs /tmp/framer-verify-materialized-XXX/materialized-export.zip
+ */
+
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { execSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
+import AdmZip from 'adm-zip';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,7 +34,6 @@ function runCommand(command, args, options = {}) {
     if (child.stdout) {
       child.stdout.on('data', (data) => {
         stdout += data;
-        // Print to console for visibility during long operations
         process.stdout.write(data);
       });
     }
@@ -46,84 +58,57 @@ function runCommand(command, args, options = {}) {
 }
 
 async function main() {
-  const url = process.argv[2];
+  const zipPath = process.argv[2];
 
-  if (!url) {
-    console.error('Usage: node scripts/verify-production-build.mjs <https-url>');
+  if (!zipPath || !fs.existsSync(zipPath)) {
+    console.error('Usage: node scripts/test-production-offline.mjs <path-to-materialized-zip>');
     process.exit(1);
   }
 
-  const testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'framer-production-test-'));
+  const testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'framer-offline-test-'));
   const generatedAppDir = path.join(testDir, 'generated-app');
 
-  console.log('\n📋 Production Build Verification');
-  console.log('================================\n');
-  console.log(`URL: ${url}`);
+  console.log('\n📋 Offline Production Build Verification');
+  console.log('========================================\n');
+  console.log(`ZIP: ${zipPath}`);
   console.log(`Test dir: ${testDir}\n`);
 
   const report = {
-    url,
+    zipPath,
     startTime: new Date().toISOString(),
     stages: {
-      cloneAndMaterialize: null,
+      extractMaterials: null,
       productionTransform: null,
       unzip: null,
       npmInstall: null,
       npmBuild: null,
     },
     errors: [],
-    generatedFiles: {
-      pageCount: 0,
-      componentCount: 0,
-      styleCount: 0,
-    },
   };
 
   try {
-    // Stage 1: Clone and materialize
-    console.log('📥 Stage 1: Clone & Materialize Assets');
-    console.log('--------------------------------------');
-    const stageStartTime = Date.now();
+    // Stage 1: Extract materials zip to get HTML
+    console.log('📦 Stage 1: Extract Materialized ZIP');
+    console.log('------------------------------------');
+    const extractStartTime = Date.now();
 
     try {
-      // Use the verify-materialized-export script to get asset report
-      const materialsDir = path.join(testDir, 'materialized');
-      const result = await runCommand('node', ['scripts/verify-materialized-export.mjs', url, `--output-dir=${materialsDir}`], {
-        cwd: projectRoot,
-        timeout: 180000,
-      });
+      const zip = new AdmZip(zipPath);
+      const materialsDir = path.join(testDir, 'materials');
+      zip.extractAllTo(materialsDir, true);
 
-      let assetReport = { discovered: 0, downloaded: 0, failed: 0 };
-      try {
-        const match = result.toString().match(/"materializedAssets":\s*({[^}]+})/);
-        if (match) {
-          assetReport = JSON.parse(match[1]);
-        }
-      } catch (e) {
-        // Couldn't parse, but that's ok - try to continue
-      }
-
-      const cloneMs = Date.now() - stageStartTime;
-      report.stages.cloneAndMaterialize = {
+      const extractMs = Date.now() - extractStartTime;
+      report.stages.extractMaterials = {
         success: true,
-        durationMs: cloneMs,
-        assetReport,
+        durationMs: extractMs,
       };
 
-      console.log(`✓ Clone completed in ${cloneMs}ms`);
-      if (assetReport) {
-        console.log(`  - Discovered: ${assetReport.discovered} assets`);
-        console.log(`  - Downloaded: ${assetReport.downloaded} assets`);
-        console.log(`  - Failed: ${assetReport.failed} assets\n`);
-      }
+      console.log(`✓ Extracted materials in ${extractMs}ms\n`);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error(`✗ Clone failed: ${msg}\n`);
-      report.stages.cloneAndMaterialize = {
-        success: false,
-        error: msg,
-      };
-      report.errors.push({ stage: 'clone', error: msg });
+      console.error(`✗ Extraction failed: ${msg}\n`);
+      report.stages.extractMaterials = { success: false, error: msg };
+      report.errors.push({ stage: 'extract', error: msg });
       throw error;
     }
 
@@ -133,10 +118,18 @@ async function main() {
     const transformStartTime = Date.now();
 
     try {
-      // Try ports in order (3000, 3001, 3002, etc.)
       const ports = [3000, 3001, 3002, 3003, 3004];
       let response = null;
       let lastError = null;
+
+      // Get HTML from materials
+      const materialsDir = path.join(testDir, 'materials');
+      const htmlFile = fs.readdirSync(materialsDir).find(f => f.endsWith('.html'));
+      if (!htmlFile) {
+        throw new Error('No HTML file found in materials');
+      }
+
+      const html = fs.readFileSync(path.join(materialsDir, htmlFile), 'utf-8');
 
       for (const port of ports) {
         try {
@@ -145,7 +138,11 @@ async function main() {
             fetch(`http://localhost:${port}/api/export-production`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url }),
+              body: JSON.stringify({
+                html,
+                materialsDir,
+                useOfflineMode: true,
+              }),
             }),
             new Promise((_, reject) =>
               setTimeout(() => reject(new Error('timeout')), 120000)
@@ -155,7 +152,6 @@ async function main() {
           if (response.ok) {
             break;
           } else {
-            // Port responded but with error - try next port
             const text = await response.text();
             console.log(`  Response: ${response.status} ${response.statusText}`);
             console.log(`  Body preview: ${text.substring(0, 100)}`);
@@ -164,12 +160,11 @@ async function main() {
           }
         } catch (e) {
           lastError = e;
-          // Try next port
         }
       }
 
       if (!response) {
-        throw new Error(`Could not connect to API server on any port (${ports.join(', ')}). ${lastError?.message || 'Connection failed'}`);
+        throw new Error(`Could not connect to API server. Run: npm run dev`);
       }
 
       if (!response.ok) {
@@ -177,8 +172,8 @@ async function main() {
       }
 
       const buffer = await response.arrayBuffer();
-      const zipPath = path.join(testDir, 'export.zip');
-      fs.writeFileSync(zipPath, Buffer.from(buffer));
+      const outZipPath = path.join(testDir, 'export.zip');
+      fs.writeFileSync(outZipPath, Buffer.from(buffer));
 
       const transformMs = Date.now() - transformStartTime;
       report.stages.productionTransform = {
@@ -190,21 +185,22 @@ async function main() {
       console.log(`✓ Transform completed in ${transformMs}ms`);
       console.log(`  - Generated ZIP: ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB\n`);
     } catch (error) {
-      console.warn('ℹ Note: API endpoint unavailable (needs server running)');
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`ℹ Note: API endpoint unavailable - ${msg}`);
       console.log('  Skipping transform and build stages.\n');
       console.log('  To run full E2E test:');
       console.log('    npm run dev &');
-      console.log(`    node scripts/verify-production-build.mjs "${url}"\n`);
+      console.log(`    node scripts/test-production-offline.mjs "${zipPath}"\n`);
 
       report.stages.productionTransform = {
         success: false,
         note: 'API endpoint not available - run "npm run dev" first',
       };
 
-      // For offline testing, just report what we got
       report.endTime = new Date().toISOString();
-      console.log('📊 Report (partial - clone & materialize only):');
+      console.log('📊 Report (partial - materials extracted only):');
       console.log(JSON.stringify(report, null, 2));
+      console.log(`\n📁 Test artifacts at: ${testDir}`);
       return;
     }
 
@@ -214,10 +210,8 @@ async function main() {
     const unzipStartTime = Date.now();
 
     try {
-      const { default: AdmZip } = await import('adm-zip');
-      const zipPath = path.join(testDir, 'export.zip');
-      const zip = new AdmZip(zipPath);
-
+      const outZipPath = path.join(testDir, 'export.zip');
+      const zip = new AdmZip(outZipPath);
       zip.extractAllTo(generatedAppDir, true);
 
       const unzipMs = Date.now() - unzipStartTime;
@@ -226,35 +220,10 @@ async function main() {
         durationMs: unzipMs,
       };
 
-      console.log(`✓ Extracted to ${generatedAppDir}`);
-
-      // Count generated files
-      const countFiles = (dir, filter) => {
-        if (!fs.existsSync(dir)) return 0;
-        return fs.readdirSync(dir, { recursive: true })
-          .filter(f => filter(f)).length;
-      };
-
-      const appDir = path.join(generatedAppDir, 'framer-export');
-      report.generatedFiles.pageCount = countFiles(
-        path.join(appDir, 'pages'),
-        f => f.endsWith('.tsx') || f.endsWith('.ts')
-      );
-      report.generatedFiles.componentCount = countFiles(
-        path.join(appDir, 'components'),
-        f => f.endsWith('.tsx')
-      );
-      report.generatedFiles.styleCount = countFiles(
-        path.join(appDir, 'styles'),
-        f => f.endsWith('.css')
-      );
-
-      console.log(`  - Pages: ${report.generatedFiles.pageCount}`);
-      console.log(`  - Components: ${report.generatedFiles.componentCount}`);
-      console.log(`  - Styles: ${report.generatedFiles.styleCount}\n`);
+      console.log(`✓ Extracted to ${generatedAppDir}\n`);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error(`✗ Unzip failed: ${msg}\n`);
+      console.error(`✗ Extraction failed: ${msg}\n`);
       report.stages.unzip = { success: false, error: msg };
       report.errors.push({ stage: 'unzip', error: msg });
       throw error;
@@ -268,8 +237,8 @@ async function main() {
     try {
       const appDir = path.join(generatedAppDir, 'framer-export');
 
-      if (!fs.existsSync(path.join(appDir, 'package.json'))) {
-        throw new Error('package.json not found in generated app');
+      if (!fs.existsSync(appDir)) {
+        throw new Error(`App directory not found at ${appDir}`);
       }
 
       console.log(`Running: npm install in ${appDir}\n`);
@@ -286,7 +255,7 @@ async function main() {
         durationMs: installMs,
       };
 
-      console.log(`✓ npm install completed in ${installMs}ms\n`);
+      console.log(`\n✓ npm install completed in ${installMs}ms\n`);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       console.error(`✗ npm install failed: ${msg}\n`);
@@ -338,7 +307,7 @@ async function main() {
     report.success = false;
     report.endTime = new Date().toISOString();
 
-    console.log('\n❌ Production build verification failed\n');
+    console.log('\n❌ Offline production build verification failed\n');
   } finally {
     console.log('📊 Final Report:');
     console.log('================\n');
@@ -346,9 +315,6 @@ async function main() {
 
     console.log('\n📁 Test artifacts preserved at:');
     console.log(`   ${testDir}\n`);
-
-    // Don't cleanup - let user inspect
-    // fs.rmSync(testDir, { recursive: true, force: true });
   }
 }
 

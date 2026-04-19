@@ -2,9 +2,22 @@
 
 This document explains how to verify that the generated Next.js app builds successfully from a cloned Framer site.
 
+## Quick Reference
+
+**Synthetic Stage 7 regression test** (stable, no external dependencies):
+```bash
+npm run test:stage-7-synthetic
+```
+
+**Full E2E test** (requires real Framer site):
+```bash
+npm run dev &          # Terminal 1
+npm run verify:materialized-export https://boost.framer.website/
+```
+
 ## Quick Start
 
-Run this in two terminal windows:
+Run this in two terminal windows (for real-site testing):
 
 **Terminal 1: Start the API server**
 ```bash
@@ -106,12 +119,13 @@ The generated Next.js code has issues. Check:
 - [x] HTML reference rewriting
 - [x] Zip rebuild without self-references
 
-### Phase B: Production Build Verification (IN PROGRESS)
-- [ ] Code generation from semantic tree
-- [ ] Component boundary detection
-- [ ] JSX generation
-- [ ] Project scaffolding
-- [ ] Build without errors
+### Phase B: Production Build Verification (STRUCTURALLY VERIFIED ✅)
+- [x] Code generation from semantic tree
+- [x] Component boundary detection
+- [x] JSX generation
+- [x] Project scaffolding
+- [x] Build without errors (verified on synthetic fixture)
+- [ ] Real-world validation on multiple Framer sites
 
 ### Phase C: Quality Improvements (TODO)
 - [ ] Semantic naming improvements
@@ -130,9 +144,51 @@ The generated Next.js code has issues. Check:
 - `lib/generators/component-generator.ts` - JSX generation
 - `lib/generators/validator.ts` - Code validation
 
+## Synthetic Stage 7 Test (Structural Validation)
+
+**Purpose:** Validate code generation, JSX indentation, and Next.js build reliability WITHOUT external dependencies.
+
+**What it tests:**
+- JSX generation from mock SemanticTreeNode data
+- SVG element handling
+- Component props inference
+- Next.js project scaffolding
+- TypeScript compilation
+- Production build success
+
+**What it does NOT test:**
+- Real Framer site crawling/cloning
+- Asset materialization
+- Real semantic naming
+- Visual fidelity
+- Complex nested structures from production sites
+
+**Run it:**
+```bash
+npm run test:stage-7-synthetic
+```
+
+**Expected output:**
+```
+✅ All stages passed!
+Generated app built successfully.
+```
+
+This test is a permanent regression gate. If it fails, Stage 7 code generation has regressed.
+
+## Real-World Validation
+
+Once the synthetic test passes, validate against actual Framer sites:
+
+1. Start with small, simple published Framer pages (fewer assets, minimal animations)
+2. Run the full E2E pipeline to identify Stage 1-7 failure points
+3. Fix issues discovered in real-world contexts
+4. Gradually expand fixture set to larger/more complex sites
+
 ## Next Steps
 
-1. Run the E2E test to identify generation failures
-2. Fix Stage 7 generation bugs
-3. Add regression tests for each failure class
-4. Measure code coverage and fidelity
+1. ✅ Establish synthetic Stage 7 regression test
+2. Find 1-3 smaller real Framer fixtures to test
+3. Run full E2E pipeline on each
+4. Classify and fix Stage 1-7 failures discovered
+5. Measure code coverage and fidelity improvements

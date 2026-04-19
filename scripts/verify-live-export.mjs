@@ -8,17 +8,23 @@ const require = createRequire(import.meta.url);
 
 async function main() {
   const url = process.argv[2];
+  const keepTemp = process.argv.includes('--keep-temp');
+  const outputDir = process.argv.find((arg) => arg.startsWith('--output-dir='))?.split('=')[1];
 
   if (!url) {
-    console.error('Usage: node scripts/verify-live-export.mjs <https-url>');
+    console.error('Usage: node scripts/verify-live-export.mjs <https-url> [--keep-temp] [--output-dir=path]');
     process.exit(1);
   }
 
   const { exportSite } = require('framer-exporter/src/cli');
 
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'framer-verify-live-'));
+  const tempDir = outputDir || fs.mkdtempSync(path.join(os.tmpdir(), 'framer-verify-live-'));
 
   try {
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
     const startedAt = Date.now();
     const zipPath = await exportSite(url, tempDir);
     const cloneMs = Date.now() - startedAt;
@@ -49,6 +55,7 @@ async function main() {
     const report = {
       url,
       zipPath,
+      tempDir,
       cloneMs,
       totalEntries: entries.length,
       entries: entries.map((entry) => entry.entryName),
@@ -63,8 +70,15 @@ async function main() {
     };
 
     console.log(JSON.stringify(report, null, 2));
+    if (keepTemp || outputDir) {
+      console.log(`\n📁 Artifacts preserved at: ${tempDir}`);
+    }
+  } catch (error) {
+    console.error(`\n❌ Export failed: ${error instanceof Error ? error.message : String(error)}`);
+    console.log(`\n📁 Artifacts preserved at: ${tempDir}`);
+    throw error;
   } finally {
-    if (fs.existsSync(tempDir)) {
+    if (fs.existsSync(tempDir) && !keepTemp && !outputDir) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
   }
