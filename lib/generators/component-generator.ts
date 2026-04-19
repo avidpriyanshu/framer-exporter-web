@@ -138,7 +138,11 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
     const framerMetadataKeys = ['routeId', 'data-component', 'data-framer-hydrate-v2', 'data-framer-ssr-released-at', 'data-framer-page-optimized-at'];
     const isFramerMetadata = framerMetadataKeys.includes(key) || key.startsWith('data-framer-');
 
-    if (key !== 'style' && key !== 'class' && !isFramerMetadata) {
+    // name attribute is only valid on form elements, not divs
+    const isFormElement = ['input', 'textarea', 'select', 'button', 'form', 'label', 'option'].includes(elementTag);
+    const isNameAttrOnNonForm = key === 'name' && !isFormElement;
+
+    if (key !== 'style' && key !== 'class' && !isFramerMetadata && !isNameAttrOnNonForm) {
       // SVG attributes preserve their names (stroke-width stays as-is, not stroked-width)
       const attrName = isSVGElement ? key : convertAttributeToReact(key);
 
