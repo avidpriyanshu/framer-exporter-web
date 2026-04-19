@@ -152,6 +152,16 @@ function isValidSVGAttribute(elementTag: string, attributeName: string): boolean
 }
 
 /**
+ * Escapes curly braces in text content for JSX
+ * Literal { and } must be wrapped in expressions: {'{'} or {'}'}
+ */
+function escapeCurlyBraces(text: string): string {
+  return text.replace(/([{}])/g, (match) => {
+    return match === '{' ? "{'{'}" : "{'}'}" ;
+  });
+}
+
+/**
  * Converts a SemanticTreeNode into JSX content
  * Handles nested elements, text content, attributes, and styles
  * Properly converts HTML attributes to React camelCase syntax
@@ -237,7 +247,8 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
   const contentParts: string[] = [];
 
   if (hasText && node.text) {
-    contentParts.push(node.text.trim());
+    const escapedText = escapeCurlyBraces(node.text.trim());
+    contentParts.push(escapedText);
   }
 
   if (hasChildren) {
@@ -253,7 +264,7 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
   const isSingleLine = !hasChildren && hasText && node.text && node.text.length < 60;
 
   if (isSingleLine && node.text) {
-    return `<${elementTag}${attrString}>${node.text}</${elementTag}>`;
+    return `<${elementTag}${attrString}>${escapeCurlyBraces(node.text)}</${elementTag}>`;
   }
 
   // Multi-line format
@@ -262,7 +273,7 @@ function nodeToJSX(node: SemanticTreeNode, depth: number = 0): string {
   }
 
   if (hasText && node.text) {
-    return `<${elementTag}${attrString}>${node.text}</${elementTag}>`;
+    return `<${elementTag}${attrString}>${escapeCurlyBraces(node.text)}</${elementTag}>`;
   }
 
   return `<${elementTag}${attrString}></${elementTag}>`;
